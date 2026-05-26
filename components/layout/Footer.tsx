@@ -1,0 +1,20 @@
+export default function Footer() {
+  return (
+    <footer className="border-t border-[var(--color-border)] mt-auto">
+      <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20 pt-6 pb-8 flex flex-row justify-between items-center">
+        <span className="font-mono text-[11px] text-vynx-faint">
+          The machines demand their own physics
+        </span>
+        <a
+          href="mailto:cristian@vynx.network"
+          className="font-mono text-[11px] text-vynx-faint hover:text-white transition-colors duration-200"
+        >
+          cristian@vynx.network
+        </a>
+        <span className="font-mono text-[11px] text-vynx-faint">
+          © 2026 VynX
+        </span>
+      </div>
+    </footer>
+  );
+}

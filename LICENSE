@@ -1,0 +1,17 @@
+Business Source License 1.1
+
+License text copyright (c) 2017 MariaDB Corporation Ab, All Rights Reserved.
+"Business Source License" is a trademark of MariaDB Corporation Ab.
+
+Parameters
+Licensor: VynX Network
+Software: VynX V1 Website
+Change Date: 2033-05-12
+Change License: MIT License
+
+Additional Use Grant:
+The Licensor hereby grants you the right to copy, modify, create derivative works, and redistribute the Software for non-commercial, educational, or testing purposes only.
+
+Any use of the Software in a production environment, or to deploy a competing decentralized settlement protocol, relayer network, or intent-based execution layer, is strictly prohibited unless explicitly authorized in writing by the Licensor.
+
+You may interact with the official, Licensor-deployed instances of the Software via smart contract calls, APIs, or user interfaces without restriction.

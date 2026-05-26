@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg:           #000000;
+  --color-bg-card:      #0D0D0D;
+  --color-bg-subtle:    #111111;
+  --color-text-primary: #FFFFFF;
+  --color-text-muted:   #888888;
+  --color-text-faint:   #7F7F7F;
+  --color-gold:         #C9A84C;
+  --color-gold-dim:     #8A7234;
+  --color-border:       rgba(255, 255, 255, 0.08);
+  --color-border-gold:  rgba(201, 168, 76, 0.4);
+}
+
+@theme inline {
+  --color-vynx-bg:        var(--color-bg);
+  --color-vynx-bg-card:   var(--color-bg-card);
+  --color-vynx-bg-subtle: var(--color-bg-subtle);
+  --color-vynx-gold:      var(--color-gold);
+  --color-vynx-gold-dim:  var(--color-gold-dim);
+  --color-vynx-muted:     var(--color-text-muted);
+  --color-vynx-faint:     var(--color-text-faint);
+
+  --font-display: var(--font-display), sans-serif;
+  --font-body:    var(--font-body), sans-serif;
+  --font-mono:    var(--font-mono), monospace;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+@utility text-hero-headline {
+  font-size: clamp(56px, 8vw, 96px);
+}
+
+@utility text-section-headline {
+  font-size: clamp(36px, 4vw, 48px);
+}
+
+@utility text-section-heading {
+  font-size: clamp(28px, 4vw, 40px);
+}
+
+@utility text-subsection-headline {
+  font-size: clamp(24px, 4vw, 36px);
+}
