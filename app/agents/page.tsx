@@ -29,7 +29,7 @@ const agentNav = [
   },
 ];
 
-const flowSteps = ["SIGN", "SUBMIT", "AUCTION", "LOCK", "SETTLE"];
+const flowSteps = ["SUBMIT", "AUCTION", "LOCK", "PAY", "SETTLE"];
 
 const methodColClass = "grid grid-cols-[160px_1fr]";
 
@@ -44,7 +44,7 @@ const sdkMethods = [
   },
   {
     method: "destroy()",
-    desc: "Releases SDK resources on agent shutdown.",
+    desc: "Aborts in-flight executeSwap() calls and stops their settlement pollers. Resolves once they settle.",
   },
 ];
 
@@ -107,7 +107,7 @@ const lifecycleRows = [
   {
     status: "PENDING",
     statusClass: "font-mono text-[12px] text-vynx-muted",
-    desc: "Intent signed and submitted. In private mempool.",
+    desc: "Intent submitted and accepted. In private mempool.",
   },
   {
     status: "IN_AUCTION",
@@ -117,7 +117,7 @@ const lifecycleRows = [
   {
     status: "LOCKED",
     statusClass: "font-mono text-[12px] text-vynx-muted",
-    desc: "Winning Solver executed lockIntent(). Funds locked on Base.",
+    desc: "SDK executed lockIntent() from the agent wallet. Funds locked on Base.",
   },
   {
     status: "SETTLED",
@@ -146,7 +146,7 @@ const agentFaqItems: FaqItem[] = [
   },
   {
     q: "Do I need ETH for gas?",
-    a: "No. The Solver internalizes gas in the bid spread. You only need USDC. An agent born with 50 USDC can operate indefinitely without native ETH.",
+    a: "Yes — Base ETH for two transactions per swap: approve() and lockIntent(). You never pay destination-chain gas; the Solver's delivery is its own transaction, internalized in the bid spread.",
   },
 ];
 
@@ -199,7 +199,7 @@ const errorClasses: ErrorClass[] = [
       },
       {
         code: "VYNX_2002_SYSTEM_UNAVAILABLE",
-        desc: "Relayer unreachable or approve transaction failed. Retry with exponential backoff.",
+        desc: "Relayer unreachable, returned a non-OK status, the approve transaction failed, or maxExecutionTimeMs elapsed — which aborts the settlement poller. Retry with backoff; check getSwapStatus() before re-submitting.",
       },
     ],
   },
@@ -245,11 +245,11 @@ export default function AgentsPage() {
         </h2>
         <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
           <p>
-            In VynX, an agent is any autonomous system that signs EIP-712
-            intents. There are no wallet popups, no brand preferences, no
-            onboarding fatigue. An intent is a signed instruction: swap X USDC
-            for Y token. The protocol handles routing, settlement, and
-            guarantees.
+            In VynX, an agent is any autonomous system that submits intents.
+            There are no wallet popups, no brand preferences, no onboarding
+            fatigue. An intent is an instruction — swap X USDC for Y token —
+            validated and signed (EIP-712) by the Relayer. The protocol handles
+            routing, settlement, and guarantees.
           </p>
         </div>
 
@@ -270,9 +270,10 @@ export default function AgentsPage() {
 
         <Card className="mt-6">
           <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed">
-            The agent signs EIP-712 and never broadcasts a transaction. The
-            Solver internalizes gas in the bid spread. An agent with 50 USDC
-            operates indefinitely without native ETH.
+            The agent wallet submits two Base transactions per swap — approve()
+            and lockIntent() — and pays their gas. The destination-chain
+            payment is the Solver&rsquo;s own transaction; its gas is
+            internalized in the bid spread.
           </p>
         </Card>
 
@@ -422,9 +423,9 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
 
         <Card className="mt-2">
           <p className="font-body font-light text-[13px] text-vynx-muted leading-relaxed">
-            EIP-1271 for ERC-4337 Smart Wallets (e.g. Coinbase Smart Wallet).
-            ecrecover for standard EOAs. The SDK does not hold capital, does not
-            sign transactions, does not query oracles.
+            The SDK submits approve() — exact allowance, never unlimited — and
+            lockIntent() from the agent wallet. It does not hold capital, does
+            not sign EIP-712 typed data, and does not query oracles.
           </p>
         </Card>
       </section>
@@ -436,8 +437,9 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
           INTENT STRUCTURE
         </h2>
         <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
-          Every intent is an EIP-712 typed data payload. The agent&rsquo;s
-          wallet signs the struct. The Relayer validates. The Solver bids.
+          Every intent is an EIP-712 typed data payload. The Relayer validates
+          and signs the struct; lockIntent() verifies that signature on-chain.
+          The Solver bids.
         </p>
 
         <div className="overflow-x-auto">

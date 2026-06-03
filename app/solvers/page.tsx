@@ -126,13 +126,14 @@ const integrationSteps = [
   },
   {
     num: "05",
-    title: "EXECUTE LOCKINTENT()",
+    title: "PAY ON THE DESTINATION CHAIN",
     body: (
       <>
-        On winning: call{" "}
-        <span className="font-mono text-[13px] text-white">lockIntent()</span>{" "}
-        using the agent&rsquo;s EIP-712 signature. SLA: 10 seconds from
-        adjudication. Breach triggers Jail Time.
+        On winning:{" "}
+        <span className="font-mono text-[13px] text-white">auction_won</span>{" "}
+        carries the agent, output token, and minimum output. Deliver the output
+        to the agent on the destination chain once the origin lock lands. The
+        witness validates token, recipient, and amount after finality.
       </>
     ),
   },
@@ -141,7 +142,8 @@ const integrationSteps = [
     title: "CLAIM FUNDS",
     body: (
       <>
-        After settlement is confirmed: call{" "}
+        Once the witness confirms your payment: redeem the relayer-signed
+        voucher via{" "}
         <span className="font-mono text-[13px] text-white">claimFunds()</span>{" "}
         on{" "}
         <span className="font-mono text-[13px] text-white">
@@ -164,7 +166,7 @@ const faqItems: FaqItem[] = [
   },
   {
     q: "What happens if I miss the 200ms window?",
-    a: "Your bid is discarded. No penalty. Jail Time only triggers on SLA breach — lockIntent() not called within 10 seconds after winning.",
+    a: "Your bid is discarded. No penalty. Jail Time only triggers on SLA breach — the origin lock not landing within 10 seconds of adjudication.",
   },
   {
     q: "Is there a minimum collateral amount?",
@@ -335,11 +337,11 @@ export default function SolversPage() {
           JAIL TIME · SLA BREACH · T = 10s
         </div>
         <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-6">
-          If a winning Solver fails to call{" "}
+          If the origin lock —{" "}
           <span className="font-mono text-[13px] text-white">lockIntent()</span>{" "}
-          within 10 seconds of adjudication, a Jail Time penalty is applied. The
-          counter escalates with each breach and resets after 90 days (N1–N4
-          only).
+          — does not land within 10 seconds of adjudication, the winning Solver
+          receives a Jail Time penalty. The counter escalates with each breach
+          and resets after 90 days (N1–N4 only).
         </p>
 
         <div className="mb-6">
@@ -526,10 +528,11 @@ export default function SolversPage() {
         />
 
         <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mt-6">
-          The SDK handles EIP-712 signing for both EOAs (ecrecover) and
-          ERC-4337 Smart Wallets (EIP-1271). Solvers do not need the SDK — it
-          is the agent-side integration layer. Solver integration is at the
-          WebSocket and contract level only.
+          The SDK submits approve() and lockIntent() from the agent wallet;
+          intent signing is the Relayer&rsquo;s (EIP-712, verified on-chain by
+          lockIntent()). Solvers do not need the SDK — it is the agent-side
+          integration layer. Solver integration is at the WebSocket and
+          contract level only.
         </p>
       </section>
 

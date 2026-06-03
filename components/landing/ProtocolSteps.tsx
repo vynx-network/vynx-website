@@ -11,8 +11,8 @@ const mono = "font-mono text-[13px] text-white";
 const steps: Step[] = [
   {
     number: "01",
-    title: "AGENT SIGNS",
-    body: "EIP-712 payload. Relayer validates: InputToken = USDC, SHF ≥ 1.20, Exposure < 80%. Private mempool.",
+    title: "AGENT SUBMITS",
+    body: "Intent payload. Relayer validates — InputToken = USDC, SHF ≥ 1.20, Exposure < 80% — and signs EIP-712. Private mempool.",
   },
   {
     number: "02",
@@ -24,9 +24,9 @@ const steps: Step[] = [
     title: "ORIGIN LOCK",
     body: (
       <>
-        Solver executes <span className={mono}>lockIntent()</span> on{" "}
-        <span className={mono}>VynxSettlement.sol</span>. Agent capital locked
-        on Base before destination pay.
+        Agent SDK executes <span className={mono}>lockIntent()</span> on{" "}
+        <span className={mono}>VynxSettlement.sol</span>. Capital locked on
+        Base before destination pay.
       </>
     ),
   },

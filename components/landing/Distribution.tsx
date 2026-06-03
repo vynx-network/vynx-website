@@ -56,8 +56,8 @@ export default function Distribution() {
 
         <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-140 -mt-4">
           The developer installs. Agents route automatically. No wallet popups.
-          No brand preferences. No onboarding fatigue. An agent with 50 USDC
-          operates indefinitely — gasless by design.
+          No brand preferences. No onboarding fatigue. An agent operates
+          indefinitely on 50 USDC plus Base gas for two transactions per swap.
         </p>
 
         <ChainBadges />

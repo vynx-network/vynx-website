@@ -1,14 +1,17 @@
 # Adapter Integration Guide — @vynx/sdk
 
-`@vynx/sdk` ships two first-class framework adapters. Both wrap the same
-`VynxCore` instance — the settlement logic is identical regardless of adapter.
+`@vynx/sdk` ships two optional framework adapters. Both wrap the same `VynxCore`
+instance — the settlement logic is identical regardless of adapter, and both are
+created from a `VynxSdkConfig`. Install only the adapter you use (the framework
+packages are optional peer dependencies).
 
 ## Coinbase AgentKit
 
 ### Prerequisites
 
-AgentKit's `@CreateAction` decorator requires TypeScript decorator metadata
-support, which standard `tsc` + `esbuild` do not emit by default.
+AgentKit's `@CreateAction` decorator requires TypeScript decorator metadata, which
+standard `tsc` + `esbuild` do not emit by default. You need `reflect-metadata` and
+an SWC-based bundler step.
 
 **Step 1 — Install**
 
@@ -17,23 +20,21 @@ npm install @vynx/sdk @coinbase/agentkit reflect-metadata
 npm install --save-dev unplugin-swc @swc/core
 ```
 
-**Step 2 — Configure tsup**
+**Step 2 — Configure tsup (SWC plugin)**
 
 ```typescript
 // tsup.config.ts
 import { defineConfig } from 'tsup';
+import swc from 'unplugin-swc';
 
 export default defineConfig({
   entry:  ['src/agent.ts'],
   format: ['esm'],
   esbuildPlugins: [
-    require('unplugin-swc').esbuild({
-      tsconfigFile: './tsconfig.json',
+    swc.esbuild({
       jsc: {
-        transform: {
-          decoratorMetadata: true,
-          legacyDecorator:   true,
-        },
+        parser:    { syntax: 'typescript', decorators: true },
+        transform: { legacyDecorator: true, decoratorMetadata: true },
       },
     }),
   ],
@@ -51,7 +52,7 @@ export default defineConfig({
 }
 ```
 
-**Step 4 — Import reflect-metadata first**
+**Step 4 — Import `reflect-metadata` first**
 
 ```typescript
 // agent.ts — must be the very first import
@@ -72,13 +73,18 @@ const agentKit = await AgentKit.from({
 });
 ```
 
-The VynX `walletClient` is **independent** of AgentKit's internal CDP wallet.
+The VynX `walletClient` is **independent** of AgentKit's internal CDP wallet — VynX
+signs `approve` + `lockIntent` with the wallet you pass in.
 
 **Available action**
 
 | Action | Parameters | Returns |
 |---|---|---|
-| `vynx_execute_swap` | `targetToken`, `amountUSD`, `targetChainId`, `recipient?`, `slippageBps?` | JSON with `destTxHash`, `outputAmount`, `executionTimeMs` |
+| `vynx_execute_swap` | `targetToken`, `amountUSD` (≥ 50), `targetChainId` (`1 \| 10 \| 137 \| 8453 \| 42161`), `recipient?` | JSON string with `status`, `destTxHash`, `outputAmount`, `executionTimeMs` |
+
+The action schema does not expose `slippageBps`; configure slippage via the
+`defaultSlippageBps` config field when creating the provider. `recipient` is
+reserved in v0.1.0 (output is delivered to the agent wallet).
 
 ---
 
@@ -107,22 +113,25 @@ export const character = {
 
 | Action | Similes | Returns |
 |---|---|---|
-| `VYNX_EXECUTE_SWAP` | swap, bridge, buy token, cross-chain swap | `{ success, destTxHash, outputAmount, executionTimeMs }` on success · `{ success: false, errorCode, recoverable, message }` on failure |
+| `VYNX_EXECUTE_SWAP` | swap, bridge, buy token, cross-chain swap | success: `{ success: true, text, data: { destTxHash, outputAmount, executionTimeMs } }` · failure: `{ success: false, text, data: { errorCode, recoverable, message }, error }` |
 
-Match on `errorCode` (a `VynxErrorCode` string) for programmatic recovery.
-Never match on `message`.
+On failure, `data.errorCode` is a `VynxErrorCode` string — match on it for
+programmatic recovery. Never match on `text` / `message`.
 
 ---
 
 ## Direct Use (no adapter)
 
-Any TypeScript agent can use `VynxCore` directly:
+Any TypeScript agent can use `VynxCore` directly — this is the lowest-overhead
+path and exposes the full `ExecuteSwapParams` (including `slippageBps`):
 
 ```typescript
 import { VynxCore } from '@vynx/sdk';
 
 const vynx = new VynxCore({ walletClient, publicClient });
-const receipt = await vynx.executeSwap({ targetToken: 'DEGEN', amountUSD: 100, targetChainId: 8453 });
+const receipt = await vynx.executeSwap({
+  targetToken: 'DEGEN', amountUSD: 100, targetChainId: 8453,
+});
 ```
 
 ---
@@ -130,9 +139,12 @@ const receipt = await vynx.executeSwap({ targetToken: 'DEGEN', amountUSD: 100, t
 ## Adding a New Adapter
 
 A new adapter:
-1. Imports `VynxCore` and `VynxSdkConfig` from `@vynx/sdk`
-2. Instantiates `VynxCore` internally with the config
-3. Wraps `core.executeSwap()` in the framework's plugin/action interface
-4. Returns success/failure in the framework's expected shape
 
-See `src/adapters/agentkit.ts` and `src/adapters/eliza.ts` (~50 lines each).
+1. Imports `VynxCore` and `VynxSdkConfig` from `@vynx/sdk`.
+2. Instantiates `VynxCore` internally with the config.
+3. Wraps `core.executeSwap()` in the framework's plugin/action interface.
+4. Returns success/failure in the framework's expected shape, surfacing
+   `VynxError.code` for programmatic error handling.
+
+See `src/adapters/agentkit.ts` and `src/adapters/eliza.ts` (~50–60 lines each) for
+reference implementations.

@@ -7,9 +7,9 @@ interface Step {
 
 const steps: Step[] = [
   {
-    phase: "SIGN",
+    phase: "SUBMIT",
     actor: "AGENT",
-    body: "The agent signs an EIP-712 Intent — token (USDC), amount, destination chain, and a 15-minute deadline. No transaction is broadcast and no gas is spent.",
+    body: "The agent submits an intent — token (USDC), amount, destination chain, and a 15-minute deadline. The SDK sends an all-zero placeholder signature; the relayer's EIP-712 signature is the authoritative one.",
   },
   {
     phase: "AUCTION",
@@ -19,7 +19,7 @@ const steps: Step[] = [
   {
     phase: "LOCK",
     actor: "AGENT → SETTLEMENT (BASE)",
-    body: "lockIntent() escrows the agent's USDC on VynxSettlement, verifying the relayer's EIP-712 signature against the live relayerKey.",
+    body: "The SDK submits approve() and lockIntent() from the agent wallet — two Base transactions, agent-paid gas. lockIntent() escrows the USDC on VynxSettlement, verifying the relayer's EIP-712 signature against the live relayerKey.",
     state: "UNKNOWN → LOCKED",
   },
   {

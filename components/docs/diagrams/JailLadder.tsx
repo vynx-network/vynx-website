@@ -56,8 +56,8 @@ export default function JailLadder() {
         </p>
         <p className="font-body font-light text-[13px] text-vynx-muted leading-relaxed mt-2 max-w-130">
           After 90 days of clean operation the N1–N4 counters reset. N5 is
-          amnesty-immune and permanent. Triggered only by an SLA breach —
-          failure to call lockIntent() within 10 s of winning.
+          amnesty-immune and permanent. Triggered only by an SLA breach — the
+          origin lock (lockIntent()) not landing within 10 s of winning.
         </p>
       </div>
     </div>

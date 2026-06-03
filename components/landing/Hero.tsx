@@ -31,7 +31,7 @@ export default function Hero() {
               REQUEST THESIS
             </Button>
             <Button variant="secondary" href="/thesis">
-              NETWORK THESIS →
+              NETWORK THESIS
             </Button>
           </div>
         </div>

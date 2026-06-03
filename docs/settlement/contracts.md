@@ -1,526 +1,498 @@
 # VynX Settlement V1 — Contract Reference
 
-> Compiler: `solc 0.8.35` | OZ v5 | Base L2 (L2 contracts) + Ethereum L1 (Registry)
+Per-contract technical reference for the VynX Settlement V1 protocol. Every state variable,
+constant, function signature, custom error, event, and invariant below is taken directly from
+the source in `src/`. The code is canonical.
+
+Common conventions across the codebase:
+- Solidity `0.8.35`; OpenZeppelin v5 via git submodules.
+- All revert conditions use custom errors (no revert strings).
+- State variables are never initialised to default values (forcing the `PUSH0` opcode).
 
 ---
 
-## Table of Contents
+## Shared Types — `src/types/VynxTypes.sol`
 
-1. [VynxRegistry (L1)](#1-vynxregistry-l1)
-2. [DirectVaultAdapter (L1)](#2-directvaultadapter-l1)
-3. [VynxToken (L2)](#3-vynxtoken-l2)
-4. [VynxAdmin (L2)](#4-vynxadmin-l2)
-5. [VynxSettlement (L2)](#5-vynxsettlement-l2)
-6. [VynxTreasury (L2)](#6-vynxtreasury-l2)
-7. [StakingRewards (L2)](#7-stakingrewards-l2)
-8. [Shared Types](#8-shared-types)
+### `enum IntentState`
+
+| Value | Name | Meaning |
+| --- | --- | --- |
+| 0 | `UNKNOWN` | Default slot; never written. Acts as replay protection. |
+| 1 | `LOCKED` | Funds held in escrow, awaiting voucher settlement. |
+| 2 | `REDEEMED` | Voucher redeemed; net proceeds released to the solver. |
+| 3 | `REFUNDED` | Deadline expired; full amount returned to the agent. |
+
+### `struct Intent`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `intentId` | `bytes32` | Unique identifier (derived off-chain). |
+| `agent` | `address` | Originating AI agent wallet. Encoded as `user` in the EIP-712 struct hash. |
+| `token` | `address` | ERC-20 token to lock. |
+| `amount` | `uint256` | Amount to lock in escrow. |
+| `solver` | `address` | Winning solver assigned to fulfil the payment. |
+| `nonce` | `uint256` | Monotonic counter; prevents intent replay. |
+| `destinationChainId` | `uint256` | Target chain for the off-chain payment leg. |
+| `deadline` | `uint256` | EIP-712 signature validity cutoff. |
+
+### `struct IntentEscrow`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `agent` | `address` | Refund recipient on deadline expiry. |
+| `token` | `address` | Token held in escrow. |
+| `amount` | `uint256` | Amount locked. |
+| `solver` | `address` | Sole authorized recipient of net proceeds. |
+| `deadline` | `uint64` | `block.timestamp + DEFAULT_DEADLINE`. |
+| `state` | `IntentState` | Current lifecycle position. |
+
+### `struct Voucher`
+
+| Field | Type | Signed? | Notes |
+| --- | --- | --- | --- |
+| `intentId` | `bytes32` | Yes | Intent this voucher settles. |
+| `solver` | `address` | Yes | Validated against `IntentEscrow.solver`. |
+| `amount` | `uint256` | Yes | Amount being claimed. |
+| `destTxHash` | `bytes32` | No | Off-chain metadata only. |
+| `issuedAt` | `int64` | No | Off-chain metadata only. |
+| `signature` | `bytes` | — | EIP-712 signature over `{intentId, solver, amount}`. |
+
+### `struct SolverInfo`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `adapter` | `address` | Adapter custodying this solver's collateral. |
+| `collateralToken` | `address` | Posted collateral token (whitelist entry). |
+| `totalCollateral` | `uint256` | Current collateral; decremented on each slash. |
+| `registeredAt` | `uint256` | `block.timestamp` at registration. |
+| `active` | `bool` | Set false permanently on deregistration. |
+
+### `struct SlashPayload`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `intentId` | `bytes32` | Intent that triggered the slash. |
+| `solver` | `address` | Solver whose collateral is seized. |
+| `agent` | `address` | Affected agent; recipient of the 5%-of-input share. |
+| `inputAmount` | `uint256` | Defaulted order input; the 10% total and 5%/5% split are derived from this on-chain. |
+| `issuedAt` | `int64` | Timestamp the Keeper Bot issued the payload. |
+| `signature` | `bytes` | ECDSA signature retained for off-chain audit trails. **Not verified on-chain.** |
 
 ---
 
-## 1. VynxRegistry (L1)
+## VynxRegistry — `src/l1/VynxRegistry.sol`
 
-**File:** `src/l1/VynxRegistry.sol`
-**Network:** Ethereum Mainnet
-**Upgradeability:** None — immutable
+Immutable solver collateral registry on Ethereum L1. Inherits `AccessControl` and
+`ReentrancyGuard`.
+
+### Roles & Constants
+
+| Name | Type | Value | Notes |
+| --- | --- | --- | --- |
+| `ADMIN_ROLE` | `bytes32` | `DEFAULT_ADMIN_ROLE` | Governs `setSHFThreshold`, `setAdapter`. |
+| `KEEPER_ROLE` | `bytes32` | `keccak256("KEEPER_ROLE")` | Governs `executeSlash`. |
+| `REBALANCE_EPOCH` | `uint32` | `604_800` | **Vestigial** public constant. No rebalance logic consumes it; it remains as an ABI getter only. |
+| `SLASH_TOTAL_BPS` | `uint256` | `1000` | Slash total = 10% of input. |
+| `AGENT_SHARE_BPS` | `uint256` | `500` | Agent compensation = 5% of input. |
 
 ### State Variables
 
-| Variable | Type | Description |
-|---|---|---|
-| `SHF_THRESHOLD` | `uint16` | Solver Health Factor minimum (default: 120 = 1.20×). |
-| `solvers` | `mapping(address => SolverInfo)` | Registry of all solvers (active or deregistered). |
-| `adapters` | `mapping(address => IVaultAdapter)` | Approved vault adapters keyed by address. |
-| `slashPool` | `mapping(address => uint256)` | Confiscated collateral per solver. |
+| Name | Type | Notes |
+| --- | --- | --- |
+| `SHF_THRESHOLD` | `uint16` | Solver Health Factor threshold (default 120 = 1.20×). |
+| `treasury` | `address immutable` | Protocol treasury recipient of the treasury slash share (L1). |
+| `solvers` | `mapping(address => SolverInfo)` | Solver registry. |
+| `adapters` | `mapping(address => IVaultAdapter)` | Approved adapters keyed by adapter address. |
+| `slashPool` | `mapping(address => uint256)` | **Cumulative accounting ledger** of total slashed per solver. Holds no funds. |
+| `_whitelistedCollateral` | `mapping(address => bool)` (private) | Whitelisted L1 collateral tokens. |
 
-### Constants / Roles
-
-| Name | Value | Description |
-|---|---|---|
-| `ADMIN_ROLE` | `DEFAULT_ADMIN_ROLE` | Governance role — adapters, thresholds. |
-| `KEEPER_ROLE` | `keccak256("KEEPER_ROLE")` | Keeper Bot role — sole slash executor. |
-| `REBALANCE_EPOCH` | `604_800` | Minimum seconds between collateral rebalances (7 days). |
+Whitelisted L1 collateral (set in constructor): USDC `0xA0b8…eB48`, USDT `0xdAC1…ec7`,
+WETH `0xC02a…Cc2`, cbBTC `0xcbB7…33Bf`, wstETH `0x7f39…2Ca0`.
 
 ### Functions
 
-| Signature | Access | Description |
-|---|---|---|
-| `registerSolver(address adapterAddr, address token, uint256 amount)` | Any | Deposits collateral via adapter, sets solver active. |
-| `deregisterSolver()` | Solver | Withdraws full collateral, sets active = false permanently. |
-| `executeSlash(SlashPayload calldata payload)` | `KEEPER_ROLE` | Slashes solver collateral; funds held in `slashPool`. |
-| `setSHFThreshold(uint16 newThreshold)` | `ADMIN_ROLE` | Updates the SHF eligibility threshold. |
-| `setAdapter(address protocol, address adapterAddr)` | `ADMIN_ROLE` | Registers or replaces a vault adapter. |
-| `getSolverCollateral(address solver)` | View | Returns live collateral from the adapter. |
-| `getSHF(address solver, uint256 intentValue)` | View | Returns true IFF `collateral >= intentValue * SHF_THRESHOLD / 100`. |
+| Signature | Access | Notes |
+| --- | --- | --- |
+| `registerSolver(address adapterAddr, address token, uint256 amount)` | `external nonReentrant` | Permissionless; registers `msg.sender`. Solver must approve the adapter (not the registry). |
+| `deregisterSolver()` | `external nonReentrant` | Permissionless; sets `active = false`, withdraws full collateral. |
+| `executeSlash(SlashPayload calldata payload)` | `external nonReentrant onlyRole(KEEPER_ROLE)` | Derives 10% total and 5%/5% split; distributes on-chain. |
+| `setSHFThreshold(uint16 newThreshold)` | `external onlyRole(ADMIN_ROLE)` | Emits `SHFThresholdUpdated`. |
+| `setAdapter(address protocol, address adapterAddr)` | `external onlyRole(ADMIN_ROLE)` | Emits `AdapterRegistered`. |
+| `getSolverCollateral(address solver)` | `external view` | Reads adapter balance. |
+| `getSHF(address solver, uint256 intentValue)` | `external view` | Eligible iff `getCollateral >= intentValue * SHF_THRESHOLD / 100`. |
 
 ### Custom Errors
 
 | Error | Trigger |
-|---|---|
-| `SolverAlreadyRegistered(address)` | `registerSolver` on an already-registered solver. |
-| `SolverNotFound(address)` | `deregisterSolver` on an unregistered or inactive solver. |
-| `SolverInactive(address)` | `executeSlash` on a non-active solver. |
-| `AdapterNotFound(address)` | `registerSolver` with an unregistered adapter address. |
-| `CollateralTokenNotWhitelisted(address)` | `registerSolver` with a non-whitelisted token. |
-| `InsufficientCollateral(address, uint256, uint256)` | `executeSlash` amount exceeds available adapter balance. |
-| `ZeroAddress()` | Constructor: any address arg is `address(0)`. |
+| --- | --- |
+| `SolverAlreadyRegistered(address solver)` | Register while already registered/active. |
+| `SolverNotFound(address solver)` | Operation on an unregistered solver. |
+| `SolverInactive(address solver)` | Slash targets a non-active solver. |
+| `AdapterNotFound(address protocol)` | Register with an unregistered adapter. |
+| `CollateralTokenNotWhitelisted(address token)` | Register with a non-whitelisted token. |
+| `InsufficientCollateral(address solver, uint256 required, uint256 available)` | Adapter balance below slash total. |
+| `ZeroAddress` | Constructor argument is zero (implementation-level guard). |
 
 ### Events
 
-| Event | Emitted by |
-|---|---|
-| `SolverRegistered(address solver, address adapter, address token, uint256 amount)` | `registerSolver` |
-| `SolverDeregistered(address solver, uint256 collateral)` | `deregisterSolver` |
-| `SolverSlashed(address solver, bytes32 intentId, uint256 amount, address adapter)` | `executeSlash` |
-| `SHFThresholdUpdated(uint16 oldThreshold, uint16 newThreshold)` | `setSHFThreshold` |
-| `AdapterRegistered(address protocol, address adapterAddr)` | `setAdapter` |
+- `SolverRegistered(address indexed solver, address adapter, address token, uint256 amount)`
+- `SolverSlashed(address indexed solver, bytes32 indexed intentId, uint256 inputAmount, uint256 slashTotal, address agent, uint256 agentShare, address treasury, uint256 treasuryShare, address adapter)` — **9 fields**.
+- `SolverDeregistered(address indexed solver, uint256 collateralReturned)`
+- `SHFThresholdUpdated(uint16 oldThreshold, uint16 newThreshold)`
+- `AdapterRegistered(address indexed protocol, address indexed adapter)`
 
-### Key Invariants
+### Invariants
 
-- `executeSlash` requires `KEEPER_ROLE`. An account with `ADMIN_ROLE` but not `KEEPER_ROLE` reverts.
-- A solver deregistered once can **never** re-register (checked via `registeredAt != 0`).
-- Slashed collateral accumulates in `slashPool` on L1; off-chain CCTP is used for L2 agent compensation.
+- The registry holds zero net token balance from a slash: it receives `slashTotal` from the
+  adapter and forwards `agentShare + treasuryShare == slashTotal` in the same call.
+- `agentShare + treasuryShare == slashTotal` exactly (treasury absorbs integer-division dust).
+- `slashPool[solver]` only ever increases and is an accounting ledger, never a custody balance.
 
 ---
 
-## 2. DirectVaultAdapter (L1)
+## DirectVaultAdapter — `src/adapters/DirectVaultAdapter.sol`
 
-**File:** `src/adapters/DirectVaultAdapter.sol`
-**Network:** Ethereum Mainnet
-**Upgradeability:** None — immutable
-**Interface:** `IVaultAdapter`
+Production V1 adapter providing direct ERC-20 custody of solver collateral (no underlying
+yield-bearing protocol). Inherits `ReentrancyGuard`.
 
-### State Variables
+### Immutables & State
 
-| Variable | Type | Description |
-|---|---|---|
-| `collateralToken` | `address immutable` | The single ERC-20 token accepted by this adapter instance. |
-| `_balances` | `mapping(address => uint256) private` | Per-solver internal balance; decremented on withdraw or slash. |
+| Name | Type | Notes |
+| --- | --- | --- |
+| `collateralToken` | `address immutable` | ERC-20 token this adapter custodies. |
+| `registry` | `address immutable` | The sole authorized slasher; receives seized funds. |
+| `_balances` | `mapping(address => uint256)` (private) | Per-solver custodied balance. |
 
 ### Functions
 
-| Signature | Access | Description |
-|---|---|---|
-| `deposit(address solver, uint256 amount)` | Any (called by Registry) | Pulls `amount` from `solver` via `safeTransferFrom`; increments `_balances[solver]`. Solver must approve this contract. |
-| `withdraw(address solver, uint256 amount)` | Any (called by Registry) | Transfers `amount` back to `solver`; decrements `_balances[solver]`. |
-| `slash(address solver, uint256 amount)` | Any (called by Registry Keeper) | Decrements `_balances[solver]` without transferring — tokens stay as slash pool for CCTP compensation. |
-| `getCollateral(address solver)` | View | Returns `_balances[solver]` — the solver's unslashed collateral. |
-| `totalCustody()` | View | Returns `IERC20(collateralToken).balanceOf(address(this))` — all solver balances plus accumulated slash pool. |
+| Signature | Access | Notes |
+| --- | --- | --- |
+| `deposit(address solver, uint256 amount)` | `external nonReentrant` | No caller restriction; registry is the intended caller. Pulls tokens from `solver` via `safeTransferFrom` — the solver must approve **this adapter**, not the registry. |
+| `withdraw(address solver, uint256 amount)` | `external nonReentrant` | No caller restriction; registry is the intended caller. Returns tokens to `solver`. |
+| `slash(address solver, uint256 amount)` | `external nonReentrant onlyRegistry` | Transfers the seized amount to the registry. |
+| `getCollateral(address solver)` | `external view` | Returns `_balances[solver]`. |
+| `totalCustody()` | `external view` | Returns the adapter's ERC-20 balance of `collateralToken`. |
 
 ### Custom Errors
 
 | Error | Trigger |
-|---|---|
-| `ZeroAddress()` | Constructor: `_collateralToken == address(0)`. |
-| `ZeroAmount()` | `deposit`, `withdraw`, or `slash` called with `amount == 0`. |
-| `InsufficientBalance(address solver, uint256 requested, uint256 available)` | `withdraw` or `slash` when `amount > _balances[solver]`. |
+| --- | --- |
+| `ZeroAddress` | Constructor token or registry is zero. |
+| `ZeroAmount` | `deposit`/`withdraw`/`slash` with amount `0`. |
+| `NotRegistry` | `slash` caller is not the registry. |
+| `InsufficientBalance(address solver, uint256 requested, uint256 available)` | Withdraw or slash exceeds `_balances[solver]`. |
 
 ### Events
 
-| Event | Emitted by |
-|---|---|
-| `CollateralDeposited(address indexed solver, uint256 amount)` | `deposit` |
-| `CollateralWithdrawn(address indexed solver, uint256 amount)` | `withdraw` |
-| `CollateralSlashed(address indexed solver, uint256 amount)` | `slash` |
+- `CollateralDeposited(address indexed solver, uint256 amount)`
+- `CollateralWithdrawn(address indexed solver, uint256 amount)`
+- `CollateralSlashed(address indexed solver, uint256 amount)`
 
-### Key Invariants
+### Invariants
 
-- `totalCustody() >= sum(_balances[all solvers])` at all times (slash pool delta is always non-negative).
-- Slashed tokens never leave the adapter — `slash` emits `CollateralSlashed` but performs no `safeTransfer`.
-- All three mutating functions are `nonReentrant` — defense-in-depth on top of Registry's own gate.
-- One adapter instance per collateral token; the V1 deployment registers three: USDC, WETH, wstETH.
+- No funds are retained after a slash: the seized amount is transferred to the registry within
+  the same call.
+- `totalCustody()` equals the sum of all active solver `_balances` under honest accounting.
 
 ---
 
-## 3. VynxToken (L2)
+## VynxToken — `src/tokens/VynxToken.sol`
 
-**File:** `src/tokens/VynxToken.sol`
-**Network:** Base Mainnet
-**Upgradeability:** None — immutable
-**Inherits:** OZ v5 `ERC20`, `ERC20Permit`, `Ownable`
+The $VYNX governance and staking token. `ERC20("VynX", "VYNX")` + `ERC20Permit("VynX")` +
+`Ownable`.
+
+| Signature | Access | Notes |
+| --- | --- | --- |
+| `constructor(address initialOwner)` | — | Sets the owner (the multisig). |
+| `mint(address to, uint256 amount)` | `external onlyOwner` | Mints to `to`. |
+
+EIP-2612 permit is inherited from `ERC20Permit`, enabling gasless approvals. There is no fixed
+cap and no custom error surface beyond the inherited OpenZeppelin behaviour.
+
+---
+
+## VynxAdmin — `src/l2/VynxAdmin.sol`
+
+UUPS-upgradeable protocol administration hub on Base L2. **The only upgradeable contract in the
+system.** Inherits `UUPSUpgradeable` and `Initializable`. `OwnableUpgradeable` is **not** used —
+ownership is replaced by explicit `watchdog` and `multisig` role addresses.
+
+### Constants
+
+| Name | Type | Value | Notes |
+| --- | --- | --- | --- |
+| `MAX_TAKE_RATE` | `uint16` | `20` | Hard cap on the take rate (0.20%). |
 
 ### State Variables
 
-| Variable | Type | Description |
-|---|---|---|
-| (ERC-20 standard) | — | `balances`, `allowances`, `totalSupply` inherited from OZ v5 `ERC20`. |
-| (ERC20Permit) | — | `nonces`, `DOMAIN_SEPARATOR` inherited from OZ v5 `ERC20Permit`. |
-| `_owner` | `address private` | OZ v5 `Ownable` — set to `multisig` at deployment; controls `mint`. |
+| Name | Type | Notes |
+| --- | --- | --- |
+| `relayerKey` | `address` | Read cross-contract by Settlement on every call; never cached there. |
+| `takeRateBps` | `uint16` | Protocol take rate in `[0, MAX_TAKE_RATE]`. |
+| `settlement` | `address` | Registered Settlement; target of `syncConfig`/`setPaused`. |
+| `treasury` | `address` | Registered Treasury. |
+| `stakingRewards` | `address` | Registered StakingRewards; target of `setPaused`. |
+| `watchdog` | `address` | Pause + relayer-key rotation. Can NEVER unpause. |
+| `multisig` | `address` | Unpause + upgrade + config. Can NEVER pause. |
+| `paused` | `bool` | Global pause flag. |
 
-### Constructor
+### Functions
+
+| Signature | Access | Notes |
+| --- | --- | --- |
+| `constructor()` | — | Calls `_disableInitializers()` to lock the implementation. |
+| `initialize(address _relayerKey, address _watchdog, address _multisig, uint16 _takeRateBps)` | `external initializer` | One-time proxy init. |
+| `pauseAll()` | `watchdog` only | Propagates `setPaused(true)` to Settlement, Treasury, StakingRewards. Reverts `AlreadyPaused`. |
+| `unpauseAll()` | `multisig` only | Propagates `setPaused(false)` to all three. Reverts `NotPaused`. |
+| `setRelayerKey(address newKey)` | `watchdog` only | Rotates the key; then calls `settlement.syncConfig(takeRateBps, treasury)`. |
+| `setTakeRate(uint16 bps)` | `multisig` only | `bps <= MAX_TAKE_RATE`; propagates via `syncConfig`. |
+| `setMultisig(address newMs)` | `multisig` only | Transfers the multisig role. |
+| `upgradeTo(address newImpl)` | `multisig` only | Calls `upgradeToAndCall(newImpl, "")`. |
+| `setContractAddresses(address _settlement, address _treasury, address _stakingRewards)` | `multisig` only | One-time post-deployment wiring. |
+| `_authorizeUpgrade(address)` | `internal view override` | Second multisig gate on the UUPS path. |
+
+### Custom Errors
+
+| Error | Trigger |
+| --- | --- |
+| `Unauthorized` | Caller is not the required role. |
+| `InvalidTakeRate(uint16 bps)` | Proposed rate exceeds `MAX_TAKE_RATE`. |
+| `ZeroAddress` | Required address argument is zero. |
+| `AlreadyPaused` | `pauseAll` while already paused. |
+| `NotPaused` | `unpauseAll` while not paused. |
+
+### Events
+
+- `RelayerKeyRotated(address oldKey, address newKey)`
+- `TakeRateUpdated(uint16 oldBps, uint16 newBps)`
+- `ProtocolPaused(address indexed by, uint256 timestamp)`
+- `ProtocolUnpaused(address indexed by, uint256 timestamp)`
+
+### Invariants
+
+- The watchdog can never unpause; the multisig can never pause (asymmetric authority).
+- Only the multisig can authorise a UUPS upgrade (gated in both `upgradeTo` and
+  `_authorizeUpgrade`).
+- `relayerKey` is never propagated to Settlement via `syncConfig`; it is read on demand.
+
+---
+
+## VynxSettlement — `src/l2/VynxSettlement.sol`
+
+Immutable intent escrow and settlement contract on Base L2. Inherits `ReentrancyGuard` and
+`EIP712`.
+
+### Constants
 
 ```solidity
-constructor(address initialOwner)
-    ERC20("VynX", "VYNX")
-    ERC20Permit("VynX")
-    Ownable(initialOwner)
-```
-
-`initialOwner` is the multisig address. Ownership is non-renounced by default; transfer requires an explicit multisig transaction.
-
-### Functions
-
-| Signature | Access | Description |
-|---|---|---|
-| `mint(address to, uint256 amount)` | `onlyOwner` (multisig) | Mints `amount` $VYNX to `to`. Only the current `owner` may call this. |
-| `transfer(address to, uint256 amount)` | Holder | Standard ERC-20 transfer. |
-| `approve(address spender, uint256 amount)` | Holder | Standard ERC-20 approval. |
-| `permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)` | Anyone | EIP-2612 gasless approval. Verifies off-chain signature against `nonces[owner]`. |
-| `transferOwnership(address newOwner)` | `onlyOwner` | Transfers minting authority to a new address. |
-
-### Custom Errors
-
-VynxToken itself defines no custom errors. Reverts originate from OZ v5 inherited contracts:
-
-| Error | Origin | Trigger |
-|---|---|---|
-| `OwnableUnauthorizedAccount(address)` | OZ `Ownable` | `mint` called by any account other than the current owner. |
-| `ERC2612ExpiredSignature(uint256)` | OZ `ERC20Permit` | `permit` called after `deadline`. |
-| `ERC2612InvalidSigner(address,address)` | OZ `ERC20Permit` | `permit` signature does not match `owner`. |
-
-### Events
-
-| Event | Emitted by |
-|---|---|
-| `Transfer(address indexed from, address indexed to, uint256 value)` | `mint`, `transfer`, `transferFrom` (ERC-20 standard) |
-| `Approval(address indexed owner, address indexed spender, uint256 value)` | `approve`, `permit` (ERC-20 standard) |
-| `OwnershipTransferred(address indexed previousOwner, address indexed newOwner)` | `transferOwnership` (OZ Ownable) |
-
-### Key Invariants
-
-- `mint` is exclusively callable by the `owner` (multisig). No other path creates supply.
-- EIP-2612 `permit` nonces are strictly monotonically increasing — replay of a consumed permit is impossible.
-- No `ReentrancyGuard` is needed: `mint` only calls `_mint` which performs no external calls.
-
----
-
-## 4. VynxAdmin (L2)
-
-**File:** `src/l2/VynxAdmin.sol`
-**Network:** Base Mainnet
-**Upgradeability:** UUPS — `multisig` is the sole upgrade authority
-
-### State Variables
-
-| Variable | Type | Description |
-|---|---|---|
-| `relayerKey` | `address` | Relayer signing key — read cross-contract by Settlement on every call. |
-| `takeRateBps` | `uint16` | Protocol fee rate in basis points. Range: [0, 20]. |
-| `settlement` | `address` | Registered VynxSettlement address. |
-| `treasury` | `address` | Registered VynxTreasury address. |
-| `stakingRewards` | `address` | Registered StakingRewards address. |
-| `watchdog` | `address` | RelayerAdmin — pause + key rotation only. |
-| `multisig` | `address` | Board multisig — unpause + upgrade + config only. |
-| `paused` | `bool` | Global protocol pause flag. |
-
-### Constants
-
-| Name | Value | Description |
-|---|---|---|
-| `MAX_TAKE_RATE` | `20` | Hard cap on take rate in basis points (0.20%). |
-
-### Functions
-
-| Signature | Access | Description |
-|---|---|---|
-| `initialize(address relayerKey, address watchdog, address multisig, uint16 takeRateBps)` | Once | UUPS proxy initializer. |
-| `pauseAll()` | `watchdog` | Pauses protocol; propagates `setPaused(true)` to all L2 contracts. |
-| `unpauseAll()` | `multisig` | Unpauses protocol; propagates `setPaused(false)` to all L2 contracts. |
-| `setRelayerKey(address newKey)` | `watchdog` | Rotates the relayer key; calls `syncConfig` on Settlement. |
-| `setTakeRate(uint16 bps)` | `multisig` | Updates take rate; propagates via `syncConfig`. |
-| `setMultisig(address newMs)` | `multisig` | Transfers the multisig role. |
-| `upgradeTo(address newImpl)` | `multisig` | Executes UUPS upgrade to new implementation. |
-| `setContractAddresses(address, address, address)` | `multisig` | Wires Settlement, Treasury, StakingRewards post-deploy. |
-
-### Custom Errors
-
-| Error | Trigger |
-|---|---|
-| `Unauthorized()` | Caller lacks the required role. |
-| `InvalidTakeRate(uint16)` | `takeRateBps > MAX_TAKE_RATE`. |
-| `ZeroAddress()` | Any address argument is `address(0)`. |
-| `AlreadyPaused()` | `pauseAll` when already paused. |
-| `NotPaused()` | `unpauseAll` when not paused. |
-
-### Events
-
-| Event | Emitted by |
-|---|---|
-| `RelayerKeyRotated(address oldKey, address newKey)` | `setRelayerKey` |
-| `TakeRateUpdated(uint16 oldBps, uint16 newBps)` | `setTakeRate` |
-| `ProtocolPaused(address indexed by, uint256 timestamp)` | `pauseAll` |
-| `ProtocolUnpaused(address indexed by, uint256 timestamp)` | `unpauseAll` |
-
-### Key Invariants
-
-- **Asymmetric pause:** `watchdog` can pause but NEVER unpause; `multisig` can unpause but NEVER pause.
-- **Upgrade guard:** `_authorizeUpgrade` reverts for any caller other than `multisig`.
-- `_disableInitializers()` is called in the implementation constructor — the logic contract can never be initialized directly.
-
----
-
-## 5. VynxSettlement (L2)
-
-**File:** `src/l2/VynxSettlement.sol`
-**Network:** Base Mainnet
-**Upgradeability:** None — immutable forever
-
-### State Variables
-
-| Variable | Type | Description |
-|---|---|---|
-| `admin` | `address immutable` | VynxAdmin proxy address — source of truth for `relayerKey`. |
-| `treasury` | `address` | Treasury address for take-rate fee routing. |
-| `takeRateBps` | `uint16` | Current take rate in basis points. |
-| `paused` | `bool` | Pause flag — set by VynxAdmin propagation only. |
-| `intents` | `mapping(bytes32 => IntentEscrow)` | Central escrow registry keyed by intentId. |
-
-### Constants
-
-| Name | Value | Description |
-|---|---|---|
-| `DEFAULT_DEADLINE` | `900` | Escrow window in seconds (15 minutes). |
-| `INTENT_TYPEHASH` | `keccak256(...)` | EIP-712 type hash for the Intent struct. |
-| `VOUCHER_TYPEHASH` | `keccak256(...)` | EIP-712 type hash for the Voucher struct. |
-
-### EIP-712 Type Hashes
-
-```
-INTENT_TYPEHASH = keccak256(
-    "Intent(uint256 nonce,address user,address token,uint256 amount,"
-    "uint256 destinationChainId,uint256 deadline)"
-)
-
-VOUCHER_TYPEHASH = keccak256(
+bytes32 public constant INTENT_TYPEHASH = keccak256(
+    "Intent(uint256 nonce,address user,address token,uint256 amount,uint256 destinationChainId,uint256 deadline)"
+);
+bytes32 public constant VOUCHER_TYPEHASH = keccak256(
     "Voucher(bytes32 intentId,address solver,uint256 amount)"
-)
+);
+uint64 public constant DEFAULT_DEADLINE = 900; // 15 minutes
 ```
 
-> The field is named `user` in the typehash (off-chain convention) but maps to `intent.agent` in the struct.
-> `destTxHash` and `issuedAt` are off-chain metadata excluded from the signed payload.
+EIP-712 domain: `EIP712("VynxSettlement", "1")` — commits to name, version, `chainId`,
+`verifyingContract`.
 
-### State Machine
+### State Variables
 
-```
-UNKNOWN (0) ──lockIntent──► LOCKED ──claimFunds──► REDEEMED
-                                 └──refundIntent──► REFUNDED
-```
-
-Terminal states (`REDEEMED`, `REFUNDED`) are irreversible. `UNKNOWN` is the default slot value and provides automatic replay protection.
+| Name | Type | Notes |
+| --- | --- | --- |
+| `admin` | `address immutable` | VynxAdmin; source of truth for `relayerKey`; sole caller of `syncConfig`/`setPaused`. |
+| `treasury` | `address` | Take-rate recipient; updated via `syncConfig`. |
+| `takeRateBps` | `uint16` | Take rate in `[0, 20]`; updated via `syncConfig`. |
+| `paused` | `bool` | When true, `lockIntent` and `claimFunds` revert. |
+| `intents` | `mapping(bytes32 => IntentEscrow)` | Central escrow registry. |
 
 ### Functions
 
-| Signature | Access | Description |
-|---|---|---|
-| `lockIntent(Intent calldata intent, bytes calldata relayerSig)` | Any | Locks agent USDC; verifies EIP-712 intent sig; state UNKNOWN → LOCKED. |
-| `claimFunds(Voucher calldata voucher)` | Any | Verifies voucher sig; deducts fee; sends net to solver; state LOCKED → REDEEMED. |
-| `refundIntent(bytes32 intentId)` | Any | Returns funds to agent after deadline expires; state LOCKED → REFUNDED. |
-| `syncConfig(uint16 newTakeRateBps, address newTreasury)` | `admin` | Propagates economic params from VynxAdmin. |
-| `setPaused(bool _paused)` | `admin` | Sets pause flag (called by VynxAdmin pause propagation). |
+| Signature | Access | Notes |
+| --- | --- | --- |
+| `lockIntent(Intent calldata intent, bytes calldata relayerSig)` | `external nonReentrant` | UNKNOWN → LOCKED. Verifies EIP-712 over the intent vs `relayerKey()`. Sets `deadline = now + 900`; pulls tokens from `intent.agent`. |
+| `claimFunds(Voucher calldata voucher)` | `external nonReentrant` | LOCKED → REDEEMED. Verifies voucher signature; pays `net` to solver, `fee` to treasury. |
+| `refundIntent(bytes32 intentId)` | `external nonReentrant` | Permissionless after deadline. LOCKED → REFUNDED. Returns full amount to agent. |
+| `syncConfig(uint16 newTakeRateBps, address newTreasury)` | `admin` only | Updates economic params. Emits `ConfigSynced`. |
+| `setPaused(bool _paused)` | `admin` only | Pause propagation. |
+| `_deductTakeRate(uint256 amount)` | `internal view` | `fee = amount * takeRateBps / 10_000` (`unchecked`); `net = amount - fee`. |
+
+`claimFunds` fee handling: `fee = amount * takeRateBps / 10_000` (integer floor; the remainder
+accrues to the solver and is never lost). When `fee > 0`, the fee is transferred to the treasury
+and `IVynxTreasury(treasury).receiveTakeRate(token, fee)` is called. A second `claimFunds` on a
+REDEEMED intent reverts `InvalidState`. If the escrow is `UNKNOWN` on a claim, the contract
+emits `SuspiciousRelayerActivity` and reverts `InvalidState`.
 
 ### Custom Errors
 
 | Error | Trigger |
-|---|---|
-| `IntentAlreadyExists(bytes32)` | `lockIntent` on a duplicate intentId. |
-| `IntentNotFound(bytes32)` | `refundIntent` on an UNKNOWN intentId. |
-| `InvalidState(bytes32, IntentState)` | Transition requested for wrong current state. |
-| `DeadlineNotExpired(bytes32, uint64)` | `refundIntent` before `block.timestamp > deadline`. |
-| `InvalidVoucherSignature(bytes32)` | Voucher ECDSA recovery ≠ `relayerKey`. |
-| `InvalidIntentSignature(bytes32)` | Intent ECDSA recovery ≠ `relayerKey`. |
-| `SolverMismatch(bytes32, address, address)` | `voucher.solver` ≠ `escrow.solver`. |
-| `ContractPaused()` | Any mutating call when `paused == true`. |
-| `Unauthorized()` | `syncConfig` or `setPaused` from non-admin. |
-| `ZeroAddress()` | Constructor or `syncConfig` with zero address. |
-| `InvalidTakeRate(uint16)` | Constructor with `bps > 20`. |
+| --- | --- |
+| `IntentAlreadyExists(bytes32 intentId)` | Lock with a non-UNKNOWN intent ID. |
+| `IntentNotFound(bytes32 intentId)` | Refund an intent with no escrow record. |
+| `InvalidState(bytes32 intentId, IntentState current)` | Operation against an intent in the wrong state. |
+| `DeadlineNotExpired(bytes32 intentId, uint64 deadline)` | Refund before `block.timestamp > deadline`. |
+| `InvalidVoucherSignature(bytes32 intentId)` | Voucher signer != `relayerKey()`. |
+| `InvalidIntentSignature(bytes32 intentId)` | Intent signer != `relayerKey()`. |
+| `SolverMismatch(bytes32 intentId, address expected, address got)` | `voucher.solver` != escrow solver. |
+| `ContractPaused` | `lockIntent`/`claimFunds` while paused. |
+| `Unauthorized` | `syncConfig`/`setPaused` caller != `admin`. |
+| `ZeroAddress` | Constructor/`syncConfig` zero treasury (implementation-level guard). |
+| `InvalidTakeRate(uint16 bps)` | Constructor take rate > 20 (implementation-level guard). |
 
 ### Events
 
-| Event | Emitted by |
-|---|---|
-| `IntentLocked(bytes32 indexed, address indexed, address indexed, address, uint256, uint64)` | `lockIntent` |
-| `VoucherRedeemed(bytes32 indexed, address indexed, uint256 netAmount, uint256 fee)` | `claimFunds` |
-| `IntentRefunded(bytes32 indexed, address indexed, uint256)` | `refundIntent` |
-| `SuspiciousRelayerActivity(bytes32 indexed, address indexed, bytes32)` | `claimFunds` (UNKNOWN state guard) |
-| `ConfigSynced(uint16, address)` | `syncConfig` |
+- `IntentLocked(bytes32 indexed intentId, address indexed agent, address indexed solver, address token, uint256 amount, uint64 deadline)`
+- `VoucherRedeemed(bytes32 indexed intentId, address indexed solver, uint256 netAmount, uint256 fee)`
+- `IntentRefunded(bytes32 indexed intentId, address indexed agent, uint256 amount)`
+- `SuspiciousRelayerActivity(bytes32 indexed intentId, address indexed attacker, bytes32 spoofedIntentId)`
+- `ConfigSynced(uint16 newTakeRateBps, address newTreasury)`
 
-### Key Invariants
+### Invariants
 
-- **Source-of-truth:** `relayerKey` is read cross-contract on every `lockIntent` and `claimFunds` — never cached locally.
-- **State finality:** Once `REDEEMED` or `REFUNDED`, no further transitions are possible.
-- **Solvency:** `IERC20(token).balanceOf(address(this)) >= Σ(escrow.amount for all LOCKED intents)`.
+- State transitions are unidirectional; REDEEMED/REFUNDED are terminal.
+- `net + fee == amount` for every redeemed intent.
+- The escrow USDC balance is always at least the sum of all LOCKED amounts (solvency).
 
 ---
 
-## 6. VynxTreasury (L2)
+## VynxTreasury — `src/l2/VynxTreasury.sol`
 
-**File:** `src/l2/VynxTreasury.sol`
-**Network:** Base Mainnet
-**Upgradeability:** None — immutable
-
-### State Variables
-
-| Variable | Type | Description |
-|---|---|---|
-| `admin` | `address immutable` | VynxAdmin address — calls `setPaused`. |
-| `settlement` | `address immutable` | VynxSettlement — sole caller of `receiveTakeRate`. |
-| `stakingRewards` | `address immutable` | Real yield destination. |
-| `keeper` | `address` | Keeper Bot — `batchCompensate` + `distributeRealYield`. |
-| `multisig` | `address` | Board multisig — `sweepForBuyback`. |
-| `paused` | `bool` | Pause flag — stored but not enforced in Treasury (enforcement is in Settlement). |
-| `yieldAccumulator` | `mapping(address => uint256)` | Real yield awaiting distribution to StakingRewards. |
-| `buybackAccumulator` | `mapping(address => uint256)` | Buyback reserve awaiting multisig sweep. |
-| `polAccumulator` | `mapping(address => uint256)` | Protocol-owned liquidity accumulator (retained). |
-| `pendingCompensations` | `mapping(address => uint256)` | Per-agent pending compensation after slashing. |
-
-### Revenue Split Constants
-
-| Constant | Value | Description |
-|---|---|---|
-| `realYieldBps` | `40` | 40% of every fee → `yieldAccumulator`. |
-| `buybackBps` | `50` | 50% of every fee → `buybackAccumulator`. |
-| `polBps` | `10` | 10% remainder → `polAccumulator` (absorbs rounding). |
-
-### Functions
-
-| Signature | Access | Description |
-|---|---|---|
-| `receiveTakeRate(address token, uint256 amount)` | `settlement` | Allocates fee across 3 buckets; no token movements (tokens pre-transferred by Settlement). |
-| `batchCompensate(address token, address[] agents, uint256[] amounts)` | `keeper` | Transfers USDC to each agent directly from treasury balance. |
-| `distributeRealYield(address token)` | `admin` or `keeper` | Zeroes yield accumulator; transfers USDC to StakingRewards; calls `notifyRewardAmount`. |
-| `sweepForBuyback(address token, uint256 amount)` | `multisig` | Decrements buyback accumulator; transfers to multisig for on-chain execution. |
-| `setPaused(bool _paused)` | `admin` | Stores pause flag (propagated by VynxAdmin). |
-
-### Custom Errors
-
-| Error | Trigger |
-|---|---|
-| `OnlySettlementAllowed()` | `receiveTakeRate` from non-settlement caller. |
-| `OnlyKeeperAllowed()` | `batchCompensate` from non-keeper caller. |
-| `ArrayLengthMismatch(uint256, uint256)` | `batchCompensate` with mismatched array lengths. |
-| `ZeroAmount()` | `receiveTakeRate` or `distributeRealYield` with zero amount. |
-| `InsufficientBuybackBalance(address, uint256, uint256)` | `sweepForBuyback` amount > accumulator balance. |
-| `ZeroAddress()` | Constructor: any address arg is `address(0)`. |
-| `Unauthorized()` | `distributeRealYield` from non-admin/non-keeper; `sweepForBuyback` from non-multisig. |
-
-### Events
-
-| Event | Emitted by |
-|---|---|
-| `TakeRateReceived(address indexed, uint256, uint256, uint256, uint256)` | `receiveTakeRate` |
-| `CompensationBatchExecuted(uint256, uint256, address)` | `batchCompensate` |
-| `RealYieldDistributed(address indexed, uint256)` | `distributeRealYield` |
-| `BuybackFundsSwept(address indexed, uint256, address indexed)` | `sweepForBuyback` |
-
-### Key Invariants
-
-- **Zero leakage:** `toYield + toBuyback + toPol == amount` for any input, guaranteed by computing `toPol` as the arithmetic remainder.
-- **CEI ordering:** `yieldAccumulator[token] = 0` is written BEFORE the external transfer in `distributeRealYield`.
-- **CEI ordering:** `buybackAccumulator[token] -= amount` is written BEFORE the external transfer in `sweepForBuyback`.
-
----
-
-## 7. StakingRewards (L2)
-
-**File:** `src/l2/StakingRewards.sol`
-**Network:** Base Mainnet
-**Upgradeability:** None — immutable
-
-### Immutables
-
-| Variable | Description |
-|---|---|
-| `rewardsToken` | USDC on Base — distributed as real yield. |
-| `stakingToken` | $VYNX token — staked by users. |
-| `rewardsDistribution` | VynxTreasury — sole caller of `notifyRewardAmount`. |
-| `admin` | VynxAdmin — sole caller of `setPaused`. |
-
-### State Variables
-
-| Variable | Type | Description |
-|---|---|---|
-| `rewardRate` | `uint256` | Current USDC-per-second emission across all stakers. |
-| `rewardPerTokenStored` | `uint256` | Global cumulative reward-per-staked-token (scaled by 1e18). |
-| `lastUpdateTime` | `uint256` | Timestamp of last accumulator update. |
-| `periodFinish` | `uint256` | Timestamp at which the current emission period ends. |
-| `userRewardPerTokenPaid` | `mapping(address => uint256)` | Per-user watermark for delta calculations. |
-| `rewards` | `mapping(address => uint256)` | Accumulated but unclaimed USDC per user. |
-| `paused` | `bool` | When true, `stake` reverts. `withdraw` and `getReward` are always available. |
+Immutable protocol treasury on Base L2. Inherits `ReentrancyGuard`.
 
 ### Constants
 
-| Name | Value | Description |
-|---|---|---|
-| `rewardsDuration` | `604800` | 7-day reward period in seconds. |
+| Name | Type | Value | Notes |
+| --- | --- | --- | --- |
+| `realYieldBps` | `uint8` | `40` | **Vestigial** ABI getter. The split logic hardcodes the literal `40/100`; this constant is not read by the logic. |
+| `buybackBps` | `uint8` | `50` | **Vestigial** ABI getter. The split logic hardcodes `50/100`; not read by the logic. |
+| `polBps` | `uint8` | `10` | **Vestigial** ABI getter. POL is computed as the arithmetic remainder; not read by the logic. |
+
+### State Variables
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `admin` | `address immutable` | Sole caller of `setPaused`. |
+| `settlement` | `address immutable` | Only address permitted to call `receiveTakeRate`. |
+| `stakingRewards` | `address immutable` | Real-yield destination. |
+| `keeper` | `address` | `batchCompensate` and `distributeRealYield`. |
+| `multisig` | `address` | `sweepForBuyback`. |
+| `paused` | `bool` | Stored flag; **no Treasury function reads it** (pause is enforced in Settlement). |
+| `yieldAccumulator` | `mapping(address => uint256)` | Per-token yield awaiting distribution. |
+| `buybackAccumulator` | `mapping(address => uint256)` | Per-token buyback awaiting sweep. |
+| `polAccumulator` | `mapping(address => uint256)` | Per-token POL retained. |
+| `pendingCompensations` | `mapping(address => uint256)` | Per-agent pending compensation balances. |
 
 ### Functions
 
-| Signature | Access | Description |
-|---|---|---|
-| `stake(uint256 amount)` | Any (not paused) | Stakes $VYNX; checkpoints accumulator via `updateReward`. |
-| `withdraw(uint256 amount)` | Any (always) | Returns staked $VYNX; never blocked by pause. |
-| `getReward()` | Any | Claims pending USDC rewards; zeroes `rewards[msg.sender]` before transfer. |
-| `exit()` | Any | Atomically withdraws full balance and claims all rewards. |
-| `notifyRewardAmount(uint256 reward)` | `rewardsDistribution` | Recalculates `rewardRate`; handles period rollover. |
-| `setPaused(bool _paused)` | `admin` | Blocks `stake` when true; `withdraw` unaffected. |
-
-### View Functions
-
-| Signature | Description |
-|---|---|
-| `lastTimeRewardApplicable()` | `min(block.timestamp, periodFinish)`. |
-| `rewardPerToken()` | Cumulative reward per staked token, scaled by 1e18. |
-| `earned(address account)` | Total USDC accrued by account, not yet claimed. |
+| Signature | Access | Notes |
+| --- | --- | --- |
+| `receiveTakeRate(address token, uint256 amount)` | `settlement` only | Pure accounting (tokens already transferred in). `toYield = amount*40/100`, `toBuyback = amount*50/100`, `toPol = amount - toYield - toBuyback`. |
+| `batchCompensate(address token, address[] agents, uint256[] amounts)` | `keeper` only, `nonReentrant` | Direct on-chain (Base L2) compensation transfers. |
+| `distributeRealYield(address token)` | `admin` or `keeper` | CEI: zeroes accumulator, transfers to StakingRewards, calls `notifyRewardAmount`. |
+| `sweepForBuyback(address token, uint256 amount)` | `multisig` only | CEI: decrements accumulator, transfers to multisig. |
+| `setPaused(bool _paused)` | `admin` only | Stores the flag (unenforced here). |
 
 ### Custom Errors
 
 | Error | Trigger |
-|---|---|
-| `ZeroAmount()` | `stake(0)` or `withdraw(0)`. |
-| `OnlyRewardsDistribution()` | `notifyRewardAmount` from non-treasury caller. |
-| `InsufficientStakeBalance(address, uint256, uint256)` | `withdraw` amount > staked balance. |
-| `ContractPaused()` | `stake` when `paused == true`. |
-| `ZeroAddress()` | Constructor: any address arg is `address(0)`. |
-| `Unauthorized()` | `setPaused` from non-admin. |
+| --- | --- |
+| `OnlySettlementAllowed` | `receiveTakeRate` caller != settlement. |
+| `OnlyKeeperAllowed` | `batchCompensate` caller != keeper. |
+| `ArrayLengthMismatch(uint256 agents, uint256 amounts)` | `batchCompensate` length mismatch. |
+| `ZeroAmount` | `receiveTakeRate` amount `0` or `distributeRealYield` empty accumulator. |
+| `InsufficientBuybackBalance(address token, uint256 requested, uint256 available)` | Sweep exceeds buyback accumulator. |
+| `ZeroAddress` | Constructor argument is zero (implementation-level guard). |
+| `Unauthorized` | `distributeRealYield`/`sweepForBuyback`/`setPaused` caller lacks the role. |
 
 ### Events
 
-| Event | Emitted by |
-|---|---|
-| `Staked(address indexed, uint256)` | `stake` |
-| `Withdrawn(address indexed, uint256)` | `withdraw` |
-| `RewardPaid(address indexed, uint256)` | `getReward` |
-| `RewardAdded(uint256)` | `notifyRewardAmount` |
+- `TakeRateReceived(address indexed token, uint256 amount, uint256 toYield, uint256 toBuyback, uint256 toPol)`
+- `CompensationBatchExecuted(uint256 agentCount, uint256 totalAmount, address token)`
+- `RealYieldDistributed(address indexed token, uint256 amount)`
+- `BuybackFundsSwept(address indexed token, uint256 amount, address indexed to)`
 
-### Key Invariants
+### Invariants
 
-- **Supply conservation:** `IERC20(stakingToken).balanceOf(address(this)) == _totalSupply` at all times.
-- **No double-claim:** After `getReward`, `rewards[msg.sender] == 0`.
-- **Monotonic accumulator:** `rewardPerToken()` is non-decreasing; subtraction in `earned()` never underflows.
-- **Withdraw always available:** Pause flag only blocks `stake`. Users can always exit.
+- `toYield + toBuyback + toPol == amount` for every inflow (no rounding leakage; POL absorbs
+  truncation).
+- Every received fee wei is either held in one of the three accumulators or has been distributed
+  to StakingRewards.
 
 ---
 
-## 8. Shared Types
+## StakingRewards — `src/l2/StakingRewards.sol`
 
-**File:** `src/types/VynxTypes.sol`
+Immutable Synthetix-pattern staking contract on Base L2, rewritten from scratch for 0.8.35 with
+zero SafeMath. Inherits `ReentrancyGuard`. Stakers deposit $VYNX and earn USDC real yield.
 
-### IntentState Enum
+### Constants & Immutables
 
-```solidity
-enum IntentState {
-    UNKNOWN,   // Default slot value (0). Replay protection.
-    LOCKED,    // Funds held in escrow.
-    REDEEMED,  // Voucher redeemed; proceeds released to solver.
-    REFUNDED   // Deadline expired; funds returned to agent.
-}
-```
+| Name | Type | Value / Notes |
+| --- | --- | --- |
+| `rewardsDuration` | `uint256` | `604800` (7 days). |
+| `rewardsToken` | `address immutable` | USDC on Base. |
+| `stakingToken` | `address immutable` | $VYNX. |
+| `rewardsDistribution` | `address immutable` | VynxTreasury; sole caller of `notifyRewardAmount`. |
+| `admin` | `address immutable` | VynxAdmin; sole caller of `setPaused`. |
 
-### Structs
+### State Variables
 
-| Struct | Fields | Used by |
-|---|---|---|
-| `Intent` | `intentId, agent, token, amount, solver, nonce, destinationChainId, deadline` | `lockIntent` calldata |
-| `IntentEscrow` | `agent, token, amount, solver, deadline, state` | `intents` mapping storage |
-| `Voucher` | `intentId, solver, amount, destTxHash, issuedAt, signature` | `claimFunds` calldata |
-| `SolverInfo` | `adapter, collateralToken, totalCollateral, registeredAt, active` | `solvers` mapping storage |
-| `SlashPayload` | `intentId, solver, amount, issuedAt, signature` | `executeSlash` calldata |
+| Name | Type | Notes |
+| --- | --- | --- |
+| `rewardRate` | `uint256` | USDC-per-second emission across all stakers. |
+| `rewardPerTokenStored` | `uint256` | Global accumulator, scaled by 1e18; monotonically non-decreasing. |
+| `lastUpdateTime` | `uint256` | Last accumulator update timestamp. |
+| `periodFinish` | `uint256` | End of the current emission period. |
+| `userRewardPerTokenPaid` | `mapping(address => uint256)` | Per-user watermark. |
+| `rewards` | `mapping(address => uint256)` | Per-user accrued, unclaimed USDC. |
+| `_totalSupply` | `uint256` (private) | Total $VYNX staked. |
+| `_balances` | `mapping(address => uint256)` (private) | Per-user staked balance. |
+| `paused` | `bool` | Only `stake` checks this flag. |
+
+### Functions
+
+| Signature | Access | Notes |
+| --- | --- | --- |
+| `stake(uint256 amount)` | `public nonReentrant updateReward(msg.sender)` | Reverts `ContractPaused`/`ZeroAmount`. |
+| `withdraw(uint256 amount)` | `public nonReentrant updateReward(msg.sender)` | **Not pausable** — users can always exit. |
+| `getReward()` | `public nonReentrant updateReward(msg.sender)` | Zeroes `rewards[msg.sender]` before transfer (no double-claim); no-op if zero. |
+| `exit()` | `external` | `withdraw(_balances[msg.sender])` then `getReward()`. |
+| `notifyRewardAmount(uint256 reward)` | `rewardsDistribution` only, `updateReward(address(0))` | New period or rollover of remaining rewards. |
+| `setPaused(bool _paused)` | `admin` only | Toggles `paused` (only affects `stake`). |
+| `lastTimeRewardApplicable()` | `public view` | `min(block.timestamp, periodFinish)`. |
+| `rewardPerToken()` | `public view` | Returns `rewardPerTokenStored` when `_totalSupply == 0`. |
+| `earned(address account)` | `public view` | `_balances[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18 + rewards[account]`. |
+
+`unchecked` proofs (documented in source):
+- `rewardPerToken()` — the accumulation term `(timeDelta * rewardRate * 1e18 / _totalSupply)`
+  has a proven maximum (≈ 4.4e34) far below `uint256.max`; the subtraction
+  `lastTimeRewardApplicable() - lastUpdateTime` cannot underflow because `lastUpdateTime` is
+  always set to `lastTimeRewardApplicable()`.
+- `earned()` — `rewardPerToken() >= userRewardPerTokenPaid[account]` always holds (monotonic
+  accumulator), so the subtraction is safe under checked arithmetic.
+
+### Custom Errors
+
+| Error | Trigger |
+| --- | --- |
+| `ZeroAmount` | `stake`/`withdraw` with amount `0`. |
+| `OnlyRewardsDistribution` | `notifyRewardAmount` caller != `rewardsDistribution`. |
+| `InsufficientStakeBalance(address user, uint256 requested, uint256 available)` | Withdraw exceeds staked balance. |
+| `ContractPaused` | `stake` while paused. |
+| `ZeroAddress` | Constructor argument is zero (implementation-level guard). |
+| `Unauthorized` | `setPaused` caller != `admin`. |
+
+### Events
+
+- `Staked(address indexed user, uint256 amount)`
+- `Withdrawn(address indexed user, uint256 amount)`
+- `RewardPaid(address indexed user, uint256 reward)`
+- `RewardAdded(uint256 reward)`
+
+### Invariants
+
+- Supply conservation: `_totalSupply == Σ(_balances)`; the contract's $VYNX balance equals the
+  net staked amount.
+- No double-claim: `rewards[account] == 0` immediately after `getReward`.
+- `rewardPerToken()` is monotonically non-decreasing.

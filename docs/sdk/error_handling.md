@@ -1,8 +1,9 @@
 # Error Handling — @vynx/sdk
 
-All errors thrown by `executeSwap()` and `getSwapStatus()` are instances of
-`VynxError` with a stable `code` field. Never match on the `message` string —
-it may change between versions.
+Every error thrown by `executeSwap()` is an instance of `VynxError` with a stable
+`code` field. Never match on the `message` string — it may change between
+versions. (`getSwapStatus()` never throws; transient errors surface as the
+`pending` state.)
 
 ```typescript
 import { VynxError, VynxErrorCode } from '@vynx/sdk';
@@ -13,10 +14,10 @@ try {
   if (err instanceof VynxError) {
     switch (err.code) {
       case VynxErrorCode.ERR_SWAP_TIMEOUT:
-        // Capital recovered — see refundTxHash
+        // Capital recovered — see err.context.refundTxHash
         break;
       case VynxErrorCode.ERR_REFUND_UNRECOVERABLE:
-        // Emergency — see procedures below
+        // Emergency — see procedure below
         break;
     }
   }
@@ -27,81 +28,99 @@ try {
 
 ### 1xxx — Pre-execution (no on-chain side-effects)
 
-These errors fire before any transaction is sent. Capital is never at risk.
-Fix the input and retry immediately.
+These errors fire before any transaction is sent. Capital is never at risk. Fix
+the input and retry immediately.
 
 **`VYNX_1001_INSUFFICIENT_FUNDS`**
 Agent USDC balance is lower than `amountUSD`.
 
 **`VYNX_1002_BELOW_MINIMUM`**
-`amountUSD` is below the protocol minimum of $50.
+`amountUSD` is below the protocol minimum of $50 (`50_000_000` atomic units).
 
 **`VYNX_1003_UNKNOWN_TOKEN`**
-`targetToken` is neither a recognized symbol nor a valid EVM address.
+`targetToken` is neither a recognized `TOKEN_REGISTRY` symbol nor a valid EVM
+address for the `targetChainId`.
 
 **`VYNX_1004_UNSUPPORTED_CHAIN`**
-`targetChainId` is not in: 1, 10, 137, 8453, 42161.
+`targetChainId` is not in `1, 10, 137, 8453, 42161` (or the origin chain is not
+`8453` / `84532`).
 
 **`VYNX_1005_QUOTE_UNAVAILABLE`**
-Both 1inch and Odos failed to return a price quote. Options:
-- Use a different `targetToken`
-- Provide a custom `quoter` in `VynxSdkConfig`
+Both the primary (1inch) and fallback (Odos) quoters failed to return a price.
+Options: use a different `targetToken`, or inject a custom `quoter` in
+`VynxSdkConfig`.
 
 ---
 
 ### 2xxx — Execution failed, no capital at risk
 
-These errors occur before `lockIntent`. Capital is never at risk.
+These errors occur before the on-chain lock. Capital is never at risk.
 
 **`VYNX_2001_NO_LIQUIDITY`**
-No solver bid, or the winning solver missed the 10-second SLA. Transient —
-retry after 5–30 seconds. `err.context.internalCode` contains: `no_bids` or
-`sla_timeout`.
+No solver was matched within the polling window, or the intent failed pre-lock.
+Transient — retry after 5–30 seconds. `err.context.internalCode` carries the
+relayer reason: `no_bids`, `sla_timeout`, `deadline_expired`, or `relayer_halt`.
+(`getSwapStatus()` reports `failed` with `retryable: true` for `no_bids` and
+`sla_timeout`.)
 
 **`VYNX_2002_SYSTEM_UNAVAILABLE`**
-Relayer unreachable or approve transaction failed. Retry with exponential
-backoff. Do NOT retry a call that timed out without a `202 Accepted` response
-— the intent may already be in the Relayer's mempool.
+The relayer was unreachable, returned a non-OK status, the `approve` transaction
+failed/reverted, or the optional `maxExecutionTimeMs` bound elapsed. When the
+bound elapses the SDK **aborts the in-flight settlement poller** (it stops
+polling and fires no background refund). Retry with exponential backoff. Do
+**not** blindly re-submit a call that timed out mid-flight — the intent may
+already be locked on-chain; check it with `getSwapStatus()` first. Capital is not
+stranded: `refundIntent` stays permissionless once the on-chain deadline passes.
 
 ---
 
 ### 3xxx — Execution failed, capital recovered automatically
 
 **`VYNX_3001_SWAP_TIMEOUT`**
-The intent was locked on-chain but the solver did not settle within 15
-minutes. The SDK automatically called `refundIntent()` and confirmed the
-refund on-chain.
+The intent was locked on-chain but the solver did not settle within the ~15-minute
+deadline. The SDK automatically called `refundIntent()` and confirmed the refund
+on-chain — your USDC has been returned.
 
 ```typescript
 case VynxErrorCode.ERR_SWAP_TIMEOUT:
-  const refundTxHash = err.context.refundTxHash as string;
-  console.log('Capital refunded at:', refundTxHash);
+  console.log('Capital refunded at:', err.context.refundTxHash);
+  console.log('Tracking ref:', err.context.trackingRef);
   break;
 ```
 
-The agent's USDC has been returned. No further action needed.
+No further action needed.
 
 ---
 
 ### 9xxx — Human intervention required
 
 **`VYNX_9001_REFUND_UNRECOVERABLE`**
-The SDK attempted to call `refundIntent()` three times and all attempts
-failed. Capital is locked in the settlement contract.
+The SDK attempted `refundIntent()` the maximum number of times
+(`PROTOCOL_CONSTANTS.REFUND_MAX_ATTEMPTS`) and every attempt failed. Capital may
+still be locked in the settlement contract.
 
 **Emergency procedure:**
 
 1. Record `err.context.trackingRef` immediately.
-2. Check intent state on-chain:
+
+2. Read the on-chain escrow state. The settlement `intents` mapping is a public
+   getter returning `(agent, token, amount, solver, deadline, state)`:
+
    ```bash
    cast call <VYNX_SETTLEMENT_ADDRESS> \
-     "getIntentState(bytes32)(uint8)" \
+     "intents(bytes32)(address,address,uint256,address,uint64,uint8)" \
      <trackingRef> \
      --rpc-url <BASE_RPC_URL>
    ```
-   `2` = LOCKED (at risk) · `3` = REDEEMED (solver won) · `4` = REFUNDED (already recovered)
 
-3. If LOCKED and deadline has passed, call `refundIntent` manually:
+   The final value is the `IntentState`:
+   `1` = LOCKED (at risk) · `2` = REDEEMED (solver already won) · `3` = REFUNDED
+   (already recovered) · `0` = UNKNOWN (never locked).
+
+3. If state is `1` (LOCKED) and the `deadline` (5th value, a unix timestamp) has
+   passed, call `refundIntent` manually — it is **permissionless** after deadline
+   expiry, so anyone may pay the gas; funds always return to the agent wallet:
+
    ```bash
    cast send <VYNX_SETTLEMENT_ADDRESS> \
      "refundIntent(bytes32)" \
@@ -109,14 +128,18 @@ failed. Capital is locked in the settlement contract.
      --private-key <AGENT_PK> \
      --rpc-url <BASE_RPC_URL>
    ```
-   `refundIntent` is callable by anyone after deadline expiry.
 
-4. Contact support at security@vynx.network with `trackingRef` and the
-   failed transaction hashes from `err.context`.
+4. If the call reverts `DeadlineNotExpired`, the deadline has not yet passed — wait
+   and retry. If it reverts `InvalidState`, the intent already left LOCKED (the
+   solver redeemed, or it was already refunded) — your capital is not stuck.
+
+5. Contact support at security@vynx.network with the `trackingRef` and the failed
+   transaction hashes from `err.context`.
 
 **`VYNX_9999_INTERNAL`**
-Unexpected SDK error. Capital not at risk. Open an issue with the full error
-and `err.context`.
+Unexpected SDK error (e.g. a malformed relayer response, or a misconfigured
+wallet account). Capital is not at risk. Open an issue with the full error and
+`err.context`.
 
 ---
 
@@ -124,8 +147,8 @@ and `err.context`.
 
 ```typescript
 err.code        // VynxErrorCode — stable across versions
-err.message     // Human-readable — do not match on this
-err.recoverable // boolean — true if retry may succeed
+err.message     // human-readable — do NOT match on this
+err.recoverable // boolean — true if a retry may succeed
 err.context     // Record<string, unknown> — error-specific metadata
 ```
 
@@ -133,5 +156,9 @@ err.context     // Record<string, unknown> — error-specific metadata
 |---|---|
 | `ERR_SWAP_TIMEOUT` | `trackingRef`, `refundTxHash` |
 | `ERR_REFUND_UNRECOVERABLE` | `trackingRef` |
-| `ERR_SWAP_NO_LIQUIDITY` | `internalCode` (`no_bids` \| `sla_timeout`) |
-| `ERR_SWAP_SYSTEM_UNAVAILABLE` | `internalCode` |
+| `ERR_SWAP_NO_LIQUIDITY` | `internalCode` (`no_bids` \| `sla_timeout` \| `deadline_expired` \| `relayer_halt`) |
+| `ERR_SWAP_SYSTEM_UNAVAILABLE` | `internalCode`, `reason` / `status` |
+| `ERR_INSUFFICIENT_FUNDS` | `balance`, `required` |
+| `ERR_BELOW_MINIMUM` | `amountUSD`, `minWei` |
+| `ERR_UNKNOWN_TOKEN` | `tokenOrSymbol`, `chainId` |
+| `ERR_UNSUPPORTED_CHAIN` | `chainId` / `targetChainId` |

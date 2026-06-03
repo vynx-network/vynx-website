@@ -1,223 +1,179 @@
 # VynX Settlement V1 — Protocol Flows
 
-> Sequence diagrams for the three primary protocol flows. All diagrams use Mermaid syntax.
+Mermaid sequence diagrams for the core protocol flows. Every diagram reflects the on-chain
+behaviour implemented in `src/`. There is no on-chain bridge between L1 and L2; the two chains
+are coordinated only by the off-chain relayer and Keeper Bot.
 
 ---
 
-## 1. Intent Lifecycle — Happy Path
+## 1. Intent Lock (Base L2)
 
-The complete flow from AI agent intent creation to solver settlement and optional refund.
+The agent's funds are pulled into the Settlement escrow after the relayer's EIP-712 intent
+signature is verified against the live relayer key.
 
 ```mermaid
 sequenceDiagram
-    participant Agent as AI Agent
-    participant Relayer as Relayer Service
-    participant Settlement as VynxSettlement (L2)
-    participant Admin as VynxAdmin (L2)
-    participant Treasury as VynxTreasury (L2)
-    participant Solver as Solver
+    actor Agent
+    participant Settlement as VynxSettlement
+    participant Admin as VynxAdmin
+    participant Token as ERC-20 (USDC)
 
-    Note over Agent,Relayer: Off-chain: Agent submits intent to Relayer
-    Agent->>Relayer: Submit Intent(intentId, agent, token, amount, solver, nonce, destChainId)
-
-    Note over Relayer: Relayer verifies solver eligibility via Registry.getSHF()
-    Note over Relayer: Relayer signs EIP-712 Intent struct with relayerKey
-
-    Relayer-->>Agent: Return relayerSig (EIP-712 signature)
-
-    Note over Agent,Settlement: On-chain: Agent locks funds
     Agent->>Settlement: lockIntent(intent, relayerSig)
-    Settlement->>Admin: relayerKey() [cross-contract read]
-    Admin-->>Settlement: address relayerKey
-    Settlement->>Settlement: ECDSA.recover(intentDigest, relayerSig) == relayerKey ?
-    Settlement->>Settlement: state UNKNOWN → LOCKED
-    Settlement->>Agent: safeTransferFrom(agent, settlement, amount)
-    Settlement-->>Agent: emit IntentLocked(intentId, agent, solver, token, amount, deadline)
+    Settlement->>Settlement: require !paused
+    Settlement->>Settlement: require intents[id].state == UNKNOWN
+    Settlement->>Settlement: structHash = keccak256(INTENT_TYPEHASH, nonce, agent, token, amount, destinationChainId, deadline)
+    Settlement->>Admin: relayerKey() (read source of truth)
+    Admin-->>Settlement: relayerKey
+    Settlement->>Settlement: require ECDSA.recover(digest, sig) == relayerKey
+    Settlement->>Settlement: deadline = now + DEFAULT_DEADLINE (900s); state = LOCKED
+    Settlement->>Token: safeTransferFrom(agent, settlement, amount)
+    Token-->>Settlement: amount escrowed
+    Settlement-->>Agent: emit IntentLocked(id, agent, solver, token, amount, deadline)
+```
 
-    Note over Solver,Relayer: Off-chain: Solver executes payment on destination chain
-    Solver->>Relayer: Submit proof of destTx (destTxHash)
-    Note over Relayer: Relayer verifies dest tx; signs EIP-712 Voucher(intentId, solver, amount)
-    Relayer-->>Solver: Return voucher with relayer signature
+---
 
-    Note over Solver,Settlement: On-chain: Solver claims escrow funds
+## 2. Voucher Claim / Settlement (Base L2)
+
+The solver redeems a relayer-signed voucher. Net proceeds go to the solver; the take-rate fee
+goes to the Treasury, which is notified to update its accounting.
+
+```mermaid
+sequenceDiagram
+    actor Solver
+    participant Settlement as VynxSettlement
+    participant Admin as VynxAdmin
+    participant Token as ERC-20 (USDC)
+    participant Treasury as VynxTreasury
+
     Solver->>Settlement: claimFunds(voucher)
-    Settlement->>Admin: relayerKey() [cross-contract read]
-    Admin-->>Settlement: address relayerKey
-    Settlement->>Settlement: ECDSA.recover(voucherDigest, voucher.sig) == relayerKey ?
-    Settlement->>Settlement: voucher.solver == escrow.solver ?
-    Settlement->>Settlement: state LOCKED → REDEEMED
-    Settlement->>Solver: safeTransfer(solver, amount - fee)
-    Settlement->>Treasury: safeTransfer(treasury, fee)
-    Settlement->>Treasury: receiveTakeRate(token, fee)
-    Settlement-->>Solver: emit VoucherRedeemed(intentId, solver, netAmount, fee)
+    Settlement->>Settlement: require !paused
+    Settlement->>Settlement: require escrow.state == LOCKED
+    Settlement->>Settlement: require voucher.solver == escrow.solver
+    Settlement->>Admin: relayerKey()
+    Admin-->>Settlement: relayerKey
+    Settlement->>Settlement: require ECDSA.recover(voucherDigest, sig) == relayerKey
+    Settlement->>Settlement: state = REDEEMED (effects before interactions)
+    Settlement->>Settlement: fee = amount * takeRateBps / 10_000; net = amount - fee
+    Settlement->>Token: safeTransfer(solver, net)
+    alt fee > 0
+        Settlement->>Token: safeTransfer(treasury, fee)
+        Settlement->>Treasury: receiveTakeRate(token, fee)
+        Treasury->>Treasury: split 40/50/10 into accumulators
+    end
+    Settlement-->>Solver: emit VoucherRedeemed(id, solver, net, fee)
 ```
 
 ---
 
-## 2. Intent Refund Flow
+## 3. Refund After Deadline (Base L2)
 
-When a solver fails to submit a voucher before the 900-second escrow deadline, anyone can trigger a refund.
+Permissionless once the escrow deadline has passed. Returns the full escrowed amount to the
+agent.
 
 ```mermaid
 sequenceDiagram
-    participant Anyone as Anyone (agent, keeper, or third party)
-    participant Settlement as VynxSettlement (L2)
-    participant Agent as AI Agent
+    actor Caller as Anyone
+    participant Settlement as VynxSettlement
+    participant Token as ERC-20 (USDC)
+    actor Agent
 
-    Note over Agent: Intent was locked; solver never submitted voucher
-    Note over Anyone: block.timestamp > escrow.deadline (900 seconds after lock)
-
-    Anyone->>Settlement: refundIntent(intentId)
-    Settlement->>Settlement: state == LOCKED ?
-    Settlement->>Settlement: block.timestamp > deadline ?
-    Settlement->>Settlement: state LOCKED → REFUNDED
-    Settlement->>Agent: safeTransfer(agent, amount)
-    Settlement-->>Anyone: emit IntentRefunded(intentId, agent, amount)
+    Caller->>Settlement: refundIntent(intentId)
+    Settlement->>Settlement: require escrow.state != UNKNOWN (else IntentNotFound)
+    Settlement->>Settlement: require escrow.state == LOCKED (else InvalidState)
+    Settlement->>Settlement: require block.timestamp > deadline (else DeadlineNotExpired)
+    Settlement->>Settlement: state = REFUNDED (effects before interactions)
+    Settlement->>Token: safeTransfer(agent, amount)
+    Token-->>Agent: full amount returned
+    Settlement-->>Caller: emit IntentRefunded(intentId, agent, amount)
 ```
 
 ---
 
-## 3. Revenue Distribution Flow
+## 4. Revenue Distribution (Base L2)
 
-How protocol fees flow from Settlement through Treasury and into StakingRewards for `$VYNX` stakers. `$VYNX` (`VynxToken.sol`) is the native staking token — holders stake `$VYNX` and earn USDC yield proportional to their share of the staked supply.
+The Treasury flushes accumulated real yield to StakingRewards, which begins (or rolls over) a
+7-day USDC reward period for $VYNX stakers.
 
 ```mermaid
 sequenceDiagram
-    participant Settlement as VynxSettlement (L2)
-    participant Treasury as VynxTreasury (L2)
-    participant StakingRewards as StakingRewards (L2)
-    participant Staker as $VYNX Staker (VynxToken holder)
-    participant Multisig as Board Multisig
-    participant Keeper as Keeper Bot
+    actor Caller as Admin or Keeper
+    participant Treasury as VynxTreasury
+    participant Token as ERC-20 (USDC)
+    participant Staking as StakingRewards
 
-    Note over Settlement,Treasury: Step 1 — Fee routing on every claimFunds call
-    Settlement->>Treasury: safeTransfer(treasury, fee)
-    Settlement->>Treasury: receiveTakeRate(token, fee)
-    Treasury->>Treasury: toYield   = fee * 40 / 100
-    Treasury->>Treasury: toBuyback = fee * 50 / 100
-    Treasury->>Treasury: toPol     = fee - toYield - toBuyback  (remainder)
-    Treasury->>Treasury: yieldAccumulator[token]   += toYield
-    Treasury->>Treasury: buybackAccumulator[token] += toBuyback
-    Treasury->>Treasury: polAccumulator[token]     += toPol
-    Treasury-->>Settlement: emit TakeRateReceived(token, fee, toYield, toBuyback, toPol)
-
-    Note over Treasury,StakingRewards: Step 2 — Weekly yield distribution (Keeper Bot)
-    Keeper->>Treasury: distributeRealYield(USDC)
-    Treasury->>Treasury: amount = yieldAccumulator[USDC]
-    Treasury->>Treasury: yieldAccumulator[USDC] = 0  (CEI: zero before transfer)
-    Treasury->>StakingRewards: safeTransfer(stakingRewards, amount)
-    Treasury->>StakingRewards: notifyRewardAmount(amount)
-    StakingRewards->>StakingRewards: rewardRate = amount / 604800
-    StakingRewards->>StakingRewards: periodFinish = block.timestamp + 604800
-    Treasury-->>Keeper: emit RealYieldDistributed(USDC, amount)
-
-    Note over StakingRewards,Staker: Step 3 — $VYNX staker claims USDC rewards
-    Note over Staker: Staker must first stake $VYNX via stakingRewards.stake(amount)
-    Staker->>StakingRewards: getReward()
-    StakingRewards->>StakingRewards: reward = earned(staker)
-    StakingRewards->>StakingRewards: rewards[staker] = 0  (CEI: zero before transfer)
-    StakingRewards->>Staker: safeTransfer(staker, reward)
-    StakingRewards-->>Staker: emit RewardPaid(staker, reward)
-
-    Note over Treasury,Multisig: Step 4 — Buyback execution (Board Multisig)
-    Multisig->>Treasury: sweepForBuyback(USDC, amount)
-    Treasury->>Treasury: buybackAccumulator[USDC] -= amount  (CEI)
-    Treasury->>Multisig: safeTransfer(multisig, amount)
-    Treasury-->>Multisig: emit BuybackFundsSwept(USDC, amount, multisig)
+    Note over Treasury: receiveTakeRate already split each inflow:<br/>toYield = amount*40/100, toBuyback = amount*50/100,<br/>toPol = amount - toYield - toBuyback
+    Caller->>Treasury: distributeRealYield(token)
+    Treasury->>Treasury: require caller == admin || caller == keeper
+    Treasury->>Treasury: amount = yieldAccumulator[token]; require amount > 0
+    Treasury->>Treasury: yieldAccumulator[token] = 0 (CEI)
+    Treasury->>Token: safeTransfer(stakingRewards, amount)
+    Treasury->>Staking: notifyRewardAmount(amount)
+    Staking->>Staking: rewardRate set / rolled over; periodFinish = now + rewardsDuration (7d)
+    Treasury-->>Caller: emit RealYieldDistributed(token, amount)
 ```
 
 ---
 
-## 4. Key Rotation Flow
+## 5. Relayer-Key Rotation (Base L2)
 
-Emergency procedure when the relayer key is compromised. The watchdog can rotate immediately without pausing the protocol.
+The watchdog rotates the relayer key. Because Settlement reads the key live on every call, the
+new key is effective immediately with zero propagation delay.
 
 ```mermaid
 sequenceDiagram
-    participant Watchdog as Watchdog
-    participant Admin as VynxAdmin (L2)
-    participant Settlement as VynxSettlement (L2)
-    participant Relayer as Relayer Service
-
-    Note over Watchdog: Relayer key compromise detected
+    actor Watchdog
+    participant Admin as VynxAdmin
+    participant Settlement as VynxSettlement
 
     Watchdog->>Admin: setRelayerKey(newKey)
-    Admin->>Admin: relayerKey = newKey
+    Admin->>Admin: require msg.sender == watchdog
+    Admin->>Admin: require newKey != address(0)
+    Admin->>Admin: oldKey = relayerKey; relayerKey = newKey
     Admin->>Settlement: syncConfig(takeRateBps, treasury)
+    Note over Admin,Settlement: Only economic params are synced.<br/>relayerKey is NOT pushed — Settlement reads it<br/>live on the very next lockIntent / claimFunds.
     Admin-->>Watchdog: emit RelayerKeyRotated(oldKey, newKey)
-
-    Note over Settlement: On the VERY NEXT transaction, Settlement reads newKey cross-contract
-    Note over Settlement: Any voucher signed by oldKey → InvalidVoucherSignature
-
-    Note over Relayer: Relayer service rotates to new signing key
-    Note over Relayer: New vouchers signed by newKey → accepted immediately
 ```
 
 ---
 
-## 5. Pause / Unpause Flow
+## 6. On-Chain Solver Slash Distribution (Ethereum L1)
 
-Emergency pause propagation across all L2 contracts.
-
-```mermaid
-sequenceDiagram
-    participant Watchdog as Watchdog
-    participant Multisig as Board Multisig
-    participant Admin as VynxAdmin (L2)
-    participant Settlement as VynxSettlement (L2)
-    participant Treasury as VynxTreasury (L2)
-    participant Staking as StakingRewards (L2)
-
-    Note over Watchdog: Emergency detected — pause initiated
-
-    Watchdog->>Admin: pauseAll()
-    Admin->>Admin: paused = true
-    Admin->>Settlement: setPaused(true)
-    Admin->>Treasury: setPaused(true)
-    Admin->>Staking: setPaused(true)
-    Admin-->>Watchdog: emit ProtocolPaused(watchdog, timestamp)
-
-    Note over Settlement: lockIntent and claimFunds now revert ContractPaused()
-    Note over Staking: stake() now reverts ContractPaused() — withdraw() still works
-
-    Note over Multisig: Emergency resolved — unpause initiated
-
-    Multisig->>Admin: unpauseAll()
-    Admin->>Admin: paused = false
-    Admin->>Settlement: setPaused(false)
-    Admin->>Treasury: setPaused(false)
-    Admin->>Staking: setPaused(false)
-    Admin-->>Multisig: emit ProtocolUnpaused(multisig, timestamp)
-```
-
----
-
-## 6. Solver Slashing Flow
-
-L1 collateral confiscation when a solver defaults on an intent obligation.
+The Keeper Bot triggers a slash. The registry derives the split, the adapter transfers the
+seized total into the registry, and the registry distributes both shares on-chain in the
+adapter's collateral token. There is no off-chain bridge and no keeper compensation step in this
+flow.
 
 ```mermaid
 sequenceDiagram
-    participant Keeper as Keeper Bot
-    participant Registry as VynxRegistry (L1)
-    participant Adapter as IVaultAdapter (L1)
-    participant Treasury as VynxTreasury (L2)
-    participant Agent as AI Agent
+    actor Keeper as Keeper Bot (KEEPER_ROLE)
+    participant Registry as VynxRegistry
+    participant Adapter as DirectVaultAdapter
+    participant Token as ERC-20 (collateral)
+    actor Agent
+    actor Treasury as Protocol Treasury (L1)
 
-    Note over Keeper: Solver default detected off-chain
-
-    Keeper->>Registry: executeSlash(SlashPayload{solver, intentId, amount})
-    Registry->>Registry: onlyRole(KEEPER_ROLE) check
+    Keeper->>Registry: executeSlash(payload)
+    Registry->>Registry: require solvers[solver].active (else SolverInactive)
+    Registry->>Registry: slashTotal = inputAmount * 1000 / 10000  (10%)
+    Registry->>Registry: agentShare = inputAmount * 500 / 10000   (5%)
+    Registry->>Registry: treasuryShare = slashTotal - agentShare  (remainder, absorbs dust)
     Registry->>Adapter: getCollateral(solver)
-    Adapter-->>Registry: available collateral
-    Registry->>Registry: slashPool[solver] += amount
-    Registry->>Registry: solvers[solver].totalCollateral -= amount
-    Registry->>Adapter: slash(solver, amount)
-    Registry-->>Keeper: emit SolverSlashed(solver, intentId, amount, adapter)
-
-    Note over Keeper,Treasury: Off-chain CCTP bridges slashed funds from L1 to L2
-
-    Keeper->>Treasury: batchCompensate(USDC, [agent], [amount])
-    Treasury->>Agent: safeTransfer(agent, amount)
-    Treasury-->>Keeper: emit CompensationBatchExecuted(1, amount, USDC)
+    Adapter-->>Registry: available
+    Registry->>Registry: require available >= slashTotal (else InsufficientCollateral)
+    Registry->>Adapter: token = collateralToken()
+    Registry->>Registry: slashPool[solver] += slashTotal (ledger, holds no funds)
+    Registry->>Registry: solvers[solver].totalCollateral -= slashTotal
+    Registry->>Adapter: slash(solver, slashTotal)
+    Adapter->>Token: safeTransfer(registry, slashTotal)
+    Token-->>Registry: seized total received
+    Registry->>Token: safeTransfer(agent, agentShare)
+    Token-->>Agent: 5% of input
+    Registry->>Token: safeTransfer(treasury, treasuryShare)
+    Token-->>Treasury: remainder
+    Registry-->>Keeper: emit SolverSlashed(solver, intentId, inputAmount, slashTotal, agent, agentShare, treasury, treasuryShare, adapter)
 ```
+
+The emitted `SolverSlashed` event carries exactly nine fields, matching the on-chain
+distribution. The signature carried in `SlashPayload` is retained for off-chain audit trails and
+is not verified on-chain; authorisation is enforced solely by `KEEPER_ROLE`.
