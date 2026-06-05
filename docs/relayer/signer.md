@@ -83,10 +83,16 @@ Order matters; each guard precedes the next:
 
 ---
 
-## 5. EIP-712 hashing (`internal/signer/eip712.go`)
+## 5. Cryptographic hashing (`internal/signer/`)
 
 The `internal/signer` package is the single source of truth for the protocol's
-EIP-712 type strings (`types.VoucherTypeString`, `types.IntentTypeString`).
+off-chain cryptography. **GASLESS REDESIGN: the relayer signs vouchers only —
+it no longer signs intents.** The retired `INTENT_TYPEHASH` path
+(`ComputeIntentHash`, `types.IntentTypeString`, the
+`cmd/relayer/intent_signer_*.go` build files) is gone; agent intents are now
+*verified*, not signed.
+
+**Voucher signing (`eip712.go` — unchanged):**
 
 - **`DomainSeparator(chainID, contract)`** — `EIP712Domain(string name,string
   version,uint256 chainId,address verifyingContract)` over `EIP712DomainName` /
@@ -96,11 +102,32 @@ EIP-712 type strings (`types.VoucherTypeString`, `types.IntentTypeString`).
   function's signature, which is the structural gate enforcing the invariant.
   `TestComputeVoucherHash_FieldCount` asserts the type string has exactly three
   fields.
-- **`ComputeIntentHash(domainSep, nonce, agent, token, amount, destChainID,
-  deadline)`** — the `INTENT_TYPEHASH` hash for a `lockIntent` call, field order
-  matching `VynxSettlement.sol` (BLINDAJE A.23). Used by the Relayer's
-  intent-signing path (`cmd/relayer/intent_signer_prod.go` /
-  `intent_signer_e2e.go`), **not** by the UDS server, which signs vouchers only.
+
+**Agent-authorization verification (`intent_nonce.go` + `eip3009.go` — used by
+intake F1, not by the UDS server):**
+
+- **`ComputeIntentNonce(intent)`** — the EIP-3009 authorization nonce:
+  `keccak256(abi.encode(INTENT_NONCE_DOMAIN_TAG, intentId, agent, token,
+  inputAmount, outputToken, minOutputAmount, destinationChainId, deadline))`,
+  byte-identical to the contract's `IntentNonceLib.computeNonce` and the SDK's
+  `computeIntentNonce`. Schema source of truth: the design doc §D2.2
+  (`vynx-settlement/docs/design/GASLESS-REDESIGN-CRYPTO-DESIGN.md`); the shared
+  §D2.5 vector (`testdata/intent-nonce-vector.json`, vendored verbatim) pins
+  all three implementations in CI.
+- **`USDCDomainSeparator(chainID)`** — the **pinned** per-chain live USDC
+  EIP-712 domain separator (read once from the deployed Circle contracts'
+  `DOMAIN_SEPARATOR()`). Pinned because USDC's domain *name* differs per chain
+  ("USD Coin" on Base mainnet 8453, "USDC" on Base Sepolia 84532) — a single
+  hardcoded name would reject every signature on the other chain.
+  `TestUSDCDomainSeparator_PerChainDerivation` re-derives each pinned value
+  from its domain fields hermetically; the env-gated
+  `TestUSDCDomainSeparator_MatchesLive` re-checks against the live contracts.
+- **`ComputeReceiveAuthDigest(usdcSep, from, to, value, validBefore, nonce)`**
+  — Circle's `ReceiveWithAuthorization` digest with `validAfter = 0` (protocol
+  constant, §D4.3).
+- **`RecoverAuthorizer(digest, sig)`** — 65-byte `r ‖ s ‖ v` recovery with
+  Circle's strictness: `v ∈ {27, 28}` and low-`s` enforced (malleated
+  signatures rejected at intake, not first at lock time).
 
 All hashes use the EIP-191 `0x19 0x01` prefix over `domainSeparator ‖ structHash`.
 

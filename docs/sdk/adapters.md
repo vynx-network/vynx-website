@@ -2,7 +2,9 @@
 
 `@vynx/sdk` ships two optional framework adapters. Both wrap the same `VynxCore`
 instance — the settlement logic is identical regardless of adapter, and both are
-created from a `VynxSdkConfig`. Install only the adapter you use (the framework
+created from a `VynxSdkConfig`. The flow is **gasless** through either adapter:
+the agent wallet signs one off-chain EIP-3009 authorization per swap and sends
+no transactions (no ETH needed). Install only the adapter you use (the framework
 packages are optional peer dependencies).
 
 ## Coinbase AgentKit
@@ -73,8 +75,10 @@ const agentKit = await AgentKit.from({
 });
 ```
 
-The VynX `walletClient` is **independent** of AgentKit's internal CDP wallet — VynX
-signs `approve` + `lockIntent` with the wallet you pass in.
+The VynX `walletClient` is **independent** of AgentKit's internal CDP wallet —
+VynX uses the wallet you pass in only to sign the single off-chain EIP-3009
+transfer authorization (typed data, zero gas); it sends no transactions on the
+swap path.
 
 **Available action**
 

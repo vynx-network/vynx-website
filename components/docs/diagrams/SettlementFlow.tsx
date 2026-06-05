@@ -9,17 +9,17 @@ const steps: Step[] = [
   {
     phase: "SUBMIT",
     actor: "AGENT",
-    body: "The agent submits an intent — token (USDC), amount, destination chain, and a 15-minute deadline. The SDK sends an all-zero placeholder signature; the relayer's EIP-712 signature is the authoritative one.",
+    body: "The agent signs one EIP-3009 authorization over the eight trade terms — USDC in, output token, minimum output, destination chain, 15-minute deadline. The authorization nonce is the keccak256 hash of those terms. Zero transactions, zero gas.",
   },
   {
     phase: "AUCTION",
     actor: "RELAYER",
-    body: "The relayer validates solver eligibility (SHF ≥ 1.20×), signs the intent, then opens a 200 ms sealed-bid auction. Highest OutputAmount wins; ties break on health factor.",
+    body: "The relayer recomputes the nonce and verifies the agent's authorization — it cannot alter a signed term — validates solver eligibility (SHF ≥ 1.20×), then opens a 200 ms sealed-bid auction. Highest OutputAmount wins; ties break on health factor.",
   },
   {
     phase: "LOCK",
-    actor: "AGENT → SETTLEMENT (BASE)",
-    body: "The SDK submits approve() and lockIntent() from the agent wallet — two Base transactions, agent-paid gas. lockIntent() escrows the USDC on VynxSettlement, verifying the relayer's EIP-712 signature against the live relayerKey.",
+    actor: "SOLVER → SETTLEMENT (BASE)",
+    body: "The winning solver calls lockIntent(intent, authorization) from its own address — solver-paid gas. The contract recomputes the nonce from the submitted terms; Circle's audited USDC verifies the agent's signature and escrows the USDC. Any tampered term breaks the lock.",
     state: "UNKNOWN → LOCKED",
   },
   {

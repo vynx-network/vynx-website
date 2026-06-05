@@ -1,9 +1,17 @@
 # Architecture — vynx-e2e control plane
 
 `vynx-e2e` contains **no protocol logic**. It is the control plane that stands up a
-complete, live VynX Protocol V1 stack on local forks and drives the 39-case acceptance
-suite against it. Everything here is orchestration: spawn the real binaries, deploy the
-real contracts, fund wallets, run the tests, tear down.
+complete, live VynX Protocol V1 stack on local forks and drives the 51-case (37-file)
+acceptance suite against it. Everything here is orchestration: spawn the real binaries,
+deploy the real contracts, fund wallets, run the tests, tear down.
+
+**The model under test is GASLESS (FASE 5).** The agent signs ONE EIP-3009
+`ReceiveWithAuthorization` off-chain (its nonce is the §D2 keccak256 of all 8 trade terms)
+and sends ZERO on-chain transactions; the winning solver pays the lock gas
+(`lockIntent`), pays the destination, pulls the relayer-signed voucher, and claims
+(`claimFunds`). A never-settled escrow is recovered by the protocol's PERMISSIONLESS
+`refundIntent`, which the suite exercises directly on-chain (it is the chain's guarantee;
+the SDK's autonomous-refund timing is the SDK's own test responsibility).
 
 This document describes how the control plane is wired. The canonical source is
 `scripts/e2e.sh` (the orchestrator), `fixtures/` (the harness), and `docker-compose.yml`.
@@ -37,12 +45,17 @@ fixed phase sequence and always tears down in reverse order:
 
 1. **INFRA** — `docker compose up -d` brings up PostgreSQL + Redis and waits for both to be
    healthy (`e2e.sh:103-105`).
-2. **ANVIL** — five anvil forks come up (§3).
-3. **DEPLOY** — the real `vynx-settlement` suite is deployed onto the forks with `forge`
-   (`DeployL2` on the Base fork, `DeployL1` on the Eth fork); the freshly deployed
-   addresses are exported, overriding the placeholder values in `.env`.
-4. **FIXTURES** — `fixtures/setup.ts` funds the solver/agent wallets, seeds solver
-   collateral, and deals each destination chain's real USDC.
+2. **ANVIL** — five anvil forks come up (§3). The Base fork is PINNED at the block before
+   the live FASE 1 deployment, then its clock is RE-ANCHORED to wall-time (see §3.1).
+3. **DEPLOY** — `DeployL2` is **REPLAYED on the pinned Base fork as the live deployer** (key
+   from the settlement repo's `.env`) so every contract lands byte-identical at its LIVE
+   testnet address — VynxSettlement at the SDK pin `0xac13…`, with real Circle Base Sepolia
+   USDC `0x036C…` as the input token (the EIP-3009 domain the SDK signs against and the
+   relayer pins). `DeployL1` deploys VynxRegistry + DirectVaultAdapter on the Eth fork. The
+   freshly deployed addresses are exported, overriding the placeholders in `.env`.
+4. **FIXTURES** — `fixtures/setup.ts` funds the solver/agent wallets (storage-slot deals of
+   real Circle USDC — no public mint), funds the keeper for the permissionless refund, seeds
+   solver collateral, and deals each destination chain's real USDC.
 5. **RELAYER** — `bin/relayer` is launched in the background (`e2e.sh:591`), then the
    **watchdog** `bin/watchdog` (`e2e.sh:674`).
 6. **TESTS** — `npx vitest run tests/` executes the suite.
@@ -63,11 +76,16 @@ misbehaving solver.
 | `bin/solver` | `solver-manager.ts` (per test) | one binary, many flag configs (INV-E2E-4) |
 
 **Not run in e2e:** the standalone **signer** binary (relayer signs in-process) and the
-**keeper** binary. `KEEPER_PK`/`KEEPER_ADDRESS` exist only as an on-chain *role*
-(`KEEPER_ROLE` is granted to the watchdog so it can execute slashes — `e2e.sh:476-483`);
-no keeper process runs. Because no keeper calls `claimFunds` on-chain, settled intents
-stay **LOCKED** on-chain while settlement completes as a relayer DB state change — several
-tests rely on this to read the still-LOCKED escrow (see `docs/tests.md`).
+**keeper** binary. `KEEPER_ROLE` is granted to the watchdog so it can execute slashes
+(`e2e.sh`); no keeper *process* runs. The `KEEPER_PK` key IS used by the harness, however:
+it is the funded, non-agent EOA that broadcasts the protocol's PERMISSIONLESS `refundIntent`
+in the refund/slash suites (keeping the agent at zero transactions).
+
+**Settlement state (GASLESS):** the winning solver pulls its voucher and calls `claimFunds`
+itself, so a settled escrow reaches **REDEEMED** on-chain (the suites wait for REDEEMED via
+`waitForEscrowState`). The old BLINDAJE assumption that "settled escrows stay LOCKED because
+no keeper claims" is obsolete. The economics/voucher suites assert the REDEEMED on-chain
+math (take-rate split, voucher replay → InvalidState) directly.
 
 ---
 
@@ -98,6 +116,34 @@ Base and Eth never degrade. When all three destinations come up real (the normal
 `multichain-destination` test exercises true cross-chain settlement: the solver pays each
 chain's **real** USDC at its real address and the witness validates against that fork.
 
+### 3.1 Gasless bootstrap (pinned replay · wall re-anchor · EOA-only agents)
+
+Three load-bearing properties make the gasless model testable on the pinned Base fork:
+
+- **Pinned-block replay → SDK-pinned addresses.** The SDK's `ADDRESSES[84532]` are PINNED
+  constants (no env override): the agent's EIP-3009 signature binds `to = VynxSettlement
+  0xac13…` and `verifyingContract = USDC 0x036C…`. So the fork must present the LIVE
+  deployment at those exact addresses — achieved by forking at `deployBlock − 1` and
+  replaying `DeployL2` as the live deployer (CREATE addresses = f(sender, nonce)).
+- **Wall-time re-anchor.** The pinned block's timestamp is ~16h behind wall. `lockIntent`
+  stores `escrow.deadline = block.timestamp + DEFAULT_DEADLINE(900)` (chain-relative) but the
+  relayer's SLA sweep is wall-clock; left un-anchored, every escrow is born already-expired.
+  `e2e.sh` re-anchors the Base anvil to wall-time (`evm_setNextBlockTimestamp` + mine) right
+  after the fork comes up. The harness keeps it anchored thereafter — `revertSnapshot` nudges
+  the reverted chain forward onto wall (forward-only, best-effort & time-bounded, §6) so the
+  shared anvil never accumulates behind-drift across suites.
+- **Chain-relative fixture deadline.** Because the Base fork can momentarily run *ahead* of
+  wall (warp suites + `--block-time`), `fixtures/agent-core.ts buildIntentTerms` sets the
+  agent's default `deadline` (= EIP-3009 `validBefore`) to `block.timestamp + 900` read from
+  the chain head, NOT wall `now()+900` — so the authorization is valid at the SOLVER's lock
+  block.timestamp regardless of drift. (Explicit overrides, e.g. expired-deadline's past
+  value, are honoured verbatim.)
+- **EOA-only agents (EIP-7702/1271 V1 limit).** Agent keys are FRESH `cast wallet new` EOAs,
+  NOT anvil's deterministic accounts: the well-known anvil addresses carry EIP-7702
+  delegation designators on real Base Sepolia, so Circle's `SignatureChecker` takes the
+  ERC-1271 contract path and the gasless lock reverts "FiatTokenV2: invalid signature". V1 is
+  EOA-only; `e2e.sh` asserts the agent keys are code-less.
+
 ---
 
 ## 4. The test solver (`solver/main.go` + `fixtures/solver-manager.ts`)
@@ -114,7 +160,8 @@ Misbehavior flags let a single binary drive negative-path tests:
 
 | Flag | Helper | Behavior under test |
 |---|---|---|
-| `--no-fulfill` | `startNoFulfillSolver` | wins the auction but never pays → deadline refund / slash |
+| `--no-fulfill` | `startNoFulfillSolver` | win → ACK → NEVER lock (arms then breaches the 10s commit SLA → `sla_expired` jail) |
+| `--lock-only` | `startLockOnlySolver` | win → ack → real `lockIntent` → skip the destination payment (the live-escrow mode for the relayer-driven refund-clock suites, e.g. tvl-cap) |
 | `--wrong-token-address` | `startWrongTokenSolver` | pays a different ERC-20 → witness rejects |
 | `--pay-recipient` | `startWrongRecipientSolver` | pays the wrong recipient → witness rejects |
 | `--pay-minimum-only` + `--underpay-by` | `startUnderpayingSolver` | probes the witness `>= minOut` boundary exactly |
@@ -145,10 +192,11 @@ referenced by `e2e.sh` or `docker-compose.yml`.)
 
 - **Redis is env-wired:** the watchdog (and harness) read `REDIS_URL` from the environment
   (`e2e.sh:663`).
-- **PostgreSQL is not:** `e2e.sh` passes a **hardcoded** `VYNX_RELAYER_DB_DSN`
-  (`postgres://vynx:vynx@127.0.0.1:5432/vynx_e2e?sslmode=disable`, `e2e.sh:576` and the
-  relayer manifest at `:610`). The `POSTGRES_URL` entry in `.env.example` is **infra
-  documentation only** — nothing in the suite reads it. See `docs/setup.md`.
+- **PostgreSQL — split:** the RELAYER's DSN is **hardcoded** by `e2e.sh`
+  (`VYNX_RELAYER_DB_DSN=postgres://vynx:vynx@127.0.0.1:5432/vynx_e2e?sslmode=disable`), so
+  changing `POSTGRES_URL` does not repoint the relayer. But `POSTGRES_URL` **is** now read by
+  the HARNESS: `fixtures/pg-utils.ts` connects with it to read `solver_health.jail_level` for
+  the jail-time-sla-breach DB assertion. See `docs/setup.md`.
 
 ---
 

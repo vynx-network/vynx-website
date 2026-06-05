@@ -68,18 +68,17 @@ at runtime by `e2e.sh` with the freshly deployed addresses).
 | `SOLVER_*_PK`, `AGENT_*_PK`, `WATCHDOG_PK`, `DEPLOYER_PK`, `MULTISIG_PK`, `KEEPER_PK` | fixtures / `e2e.sh` | anvil deterministic accounts |
 | `E2E_TIMEOUT_MS` | `vitest.config.ts` | per-test timeout (default 30000) |
 
-### The `POSTGRES_URL` asymmetry (read this)
+### `POSTGRES_URL` — RELAYER hardcoded, HARNESS env-wired (read this)
 
-`POSTGRES_URL` is present in `.env.example`, **but the suite never reads it.** `e2e.sh`
-passes the database coordinates to the relayer as a **hardcoded** DSN
-(`VYNX_RELAYER_DB_DSN=postgres://vynx:vynx@127.0.0.1:5432/vynx_e2e?sslmode=disable`,
-`e2e.sh:576` and the relayer manifest at `:610`). `POSTGRES_URL` is kept purely as **infra
-documentation** of where the Docker Postgres listens.
+The RELAYER's DB coordinates are a **hardcoded** DSN passed by `e2e.sh`
+(`VYNX_RELAYER_DB_DSN=postgres://vynx:vynx@127.0.0.1:5432/vynx_e2e?sslmode=disable`), so
+changing `POSTGRES_URL` does NOT repoint the relayer.
 
-This is deliberately asymmetric with Redis: `REDIS_URL` **is** read from the environment
-(`e2e.sh:663`). So changing `POSTGRES_URL` in `.env` has no effect; to point the suite at a
-different Postgres you must change the hardcoded DSN in `e2e.sh`. If you change the
-`docker-compose.yml` Postgres credentials or port, update the DSN to match.
+But `POSTGRES_URL` **is** read by the HARNESS as of Sprint 5.2: `fixtures/pg-utils.ts`
+(node-postgres) connects with it to read `solver_health.jail_level` for the
+jail-time-sla-breach DB assertion. Keep `POSTGRES_URL` pointed at the same Docker Postgres as
+the hardcoded relayer DSN; if you change the `docker-compose.yml` credentials/port, update
+BOTH the DSN in `e2e.sh` and `POSTGRES_URL`.
 
 ---
 
@@ -99,8 +98,8 @@ make e2e            # build binaries, deploy contracts, run the full suite
   `vynx-settlement` contracts, funds wallets, launches the relayer + watchdog, runs
   `vitest`, and tears everything down.
 
-A green run ends with **39 passed** (39/39). The PHASE 5 / project-final gate requires this
-to pass twice consecutively.
+A green run ends with **51 passed** (51 it() across 37 files). The FASE 5 / project-final
+gate requires this to pass twice consecutively (`make e2e` ×2).
 
 ### Useful sub-commands
 

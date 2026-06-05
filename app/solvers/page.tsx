@@ -126,14 +126,16 @@ const integrationSteps = [
   },
   {
     num: "05",
-    title: "PAY ON THE DESTINATION CHAIN",
+    title: "LOCK, THEN PAY",
     body: (
       <>
         On winning:{" "}
         <span className="font-mono text-[13px] text-white">auction_won</span>{" "}
-        carries the agent, output token, and minimum output. Deliver the output
-        to the agent on the destination chain once the origin lock lands. The
-        witness validates token, recipient, and amount after finality.
+        delivers the signed intent and the agent&rsquo;s authorization. Execute
+        lockIntent() on Base from your own address — your transaction, your gas
+        — within the 10 s SLA, then deliver the output to the agent on the
+        destination chain. The witness validates token, recipient, and amount
+        against the agent-signed terms after finality.
       </>
     ),
   },
@@ -166,7 +168,7 @@ const faqItems: FaqItem[] = [
   },
   {
     q: "What happens if I miss the 200ms window?",
-    a: "Your bid is discarded. No penalty. Jail Time only triggers on SLA breach — the origin lock not landing within 10 seconds of adjudication.",
+    a: "Your bid is discarded. No penalty. Jail Time only triggers on SLA breach — your lock not landing within 10 seconds of adjudication.",
   },
   {
     q: "Is there a minimum collateral amount?",
@@ -209,6 +211,9 @@ export default function SolversPage() {
             is a market maker that competes in sealed-bid auctions to fill agent
             intents. The Solver with the highest OutputAmount wins each auction
             and earns the spread between their bid and the agent&rsquo;s minimum.
+            The winning Solver executes the origin lock from its own address and
+            bears all gas; the agent&rsquo;s eight terms are bound by one
+            signature and cannot be altered.
           </p>
           <p>
             Participation requires locking USDC collateral above the SHF
@@ -528,11 +533,11 @@ export default function SolversPage() {
         />
 
         <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mt-6">
-          The SDK submits approve() and lockIntent() from the agent wallet;
-          intent signing is the Relayer&rsquo;s (EIP-712, verified on-chain by
-          lockIntent()). Solvers do not need the SDK — it is the agent-side
-          integration layer. Solver integration is at the WebSocket and
-          contract level only.
+          The SDK signs the agent&rsquo;s EIP-3009 authorization client-side;
+          there is no relayer-signed intent. The eight terms are agent-signed
+          and verified by USDC inside lockIntent(). Solvers do not need the
+          SDK — it is the agent-side integration layer. Solver integration is
+          at the WebSocket and contract level only.
         </p>
       </section>
 

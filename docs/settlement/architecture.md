@@ -3,11 +3,18 @@
 This document describes the on-chain architecture of the VynX Settlement V1 protocol as
 implemented in `src/`. The code is the single source of truth; this document mirrors it.
 
-VynX is a cross-chain settlement protocol for AI agents. An agent locks funds in an escrow
-on Base L2, a solver fulfils the corresponding payment on a destination chain off-chain, and
-the solver redeems a relayer-signed voucher to release the escrowed funds (minus a small
-take rate). Solver accountability is enforced by an over-collateralisation registry on
-Ethereum L1 with a wallet-gated slashing mechanism.
+VynX is a cross-chain settlement protocol for AI agents, built on the **trust-minimized,
+single-signature gasless custody model** (design doc
+`docs/design/GASLESS-REDESIGN-CRYPTO-DESIGN.md`). The agent signs **one** EIP-3009
+`receiveWithAuthorization` off-chain — for free — whose nonce is the keccak256 hash of every
+trade term (§D2). The winning solver executes `lockIntent` on Base L2 and pays all gas; the
+escrowed USDC is pulled in by Circle's audited USDC contract, which verifies the agent's
+signature. The solver fulfils the corresponding payment on a destination chain off-chain and
+redeems a relayer-signed voucher to release the escrowed funds (minus a small take rate).
+The relayer validates and orchestrates the auction but **never signs intents** — no actor
+between the agent and the contract can alter the agent's terms. Solver accountability is
+enforced by an over-collateralisation registry on Ethereum L1 with a wallet-gated slashing
+mechanism.
 
 ---
 
@@ -27,7 +34,7 @@ The protocol spans two independent chains and consists of seven contracts.
 | Contract | Mutability | Purpose |
 | --- | --- | --- |
 | `VynxAdmin` | UUPS upgradeable (the ONLY upgradeable contract) | Source of truth for the relayer key, take rate, and global pause state. |
-| `VynxSettlement` | Immutable (EIP-712) | Intent escrow and settlement; verifies relayer signatures; runs the intent state machine. |
+| `VynxSettlement` | Immutable (EIP-712 for vouchers) | Intent escrow and settlement; pulls agent funds gaslessly via EIP-3009 `receiveWithAuthorization` on `lockIntent` (immutable `usdc`); verifies relayer voucher signatures on `claimFunds`; runs the intent state machine. |
 | `VynxTreasury` | Immutable | Receives take-rate fees; splits revenue 40/50/10 across yield, buyback, and POL buckets. |
 | `StakingRewards` | Immutable (Synthetix pattern) | Stakers deposit $VYNX, earn USDC real yield. |
 | `VynxToken` | Immutable (ERC20 + ERC20Permit + Ownable) | The $VYNX governance and staking token. |
@@ -74,12 +81,13 @@ On L2, the take-rate revenue cycle is self-contained: Settlement → Treasury �
 ## 3. Source-of-Truth Relayer Key Pattern (Zero-Delay Rotation)
 
 `VynxAdmin` is the single source of truth for the relayer signing key. `VynxSettlement`
-**never caches the key locally**. On every `lockIntent` and `claimFunds` call, Settlement reads
-`IVynxAdmin(admin).relayerKey()` cross-contract and uses that value to verify the EIP-712
-signature:
+**never caches the key locally**. On every `claimFunds` call (the only function that still
+verifies a relayer signature — `lockIntent` is verified by Circle's USDC since the gasless
+redesign), Settlement reads `IVynxAdmin(admin).relayerKey()` cross-contract and uses that
+value to verify the EIP-712 voucher signature:
 
 ```solidity
-if (signer != IVynxAdmin(admin).relayerKey()) revert InvalidIntentSignature(intent.intentId);
+if (signer != IVynxAdmin(admin).relayerKey()) revert InvalidVoucherSignature(voucher.intentId);
 ```
 
 Because the key is read fresh on every verification, a rotation via
@@ -90,26 +98,31 @@ key itself is never passed through `syncConfig`; only the economic parameters ar
 
 ---
 
-## 4. EIP-712 Domain and TypeHashes
+## 4. Signature Domains — 3009 Custody vs 712 Vouchers
+
+The two signed artifacts in the protocol live in **different cryptographic domains**:
+
+### Intent custody — the agent's EIP-3009 authorization (USDC's domain)
+
+`lockIntent` carries no protocol signature at all. The agent signs Circle's
+`ReceiveWithAuthorization(from,to,value,validAfter,validBefore,nonce)` struct against
+**USDC's own EIP-712 domain**, where the `nonce` is not random but the keccak256 hash of all
+eight intent terms prefixed by the `INTENT_NONCE_DOMAIN_TAG` protocol constant (§D2.2 — the
+single `internal pure` implementation is `IntentNonceLib.computeNonce`). At lock time the
+contract recomputes the nonce from the submitted intent and hands verification to Circle's
+audited code: any tampered term changes the recomputed nonce, the signature no longer
+matches, and USDC reverts. Deployment binding comes from `to = address(settlement)` inside
+the signed 3009 envelope plus USDC's own domain separator (live `chainId` + USDC address) —
+§D2.4. The former `INTENT_TYPEHASH` and the `InvalidIntentSignature` error were **removed**
+in Sprint 1.2.
+
+### Voucher settlement — the relayer's EIP-712 signature (Settlement's domain)
 
 `VynxSettlement` initialises its EIP-712 domain in the constructor as
-`EIP712("VynxSettlement", "1")`. The domain separator therefore commits to the name, version,
-`chainId`, and `verifyingContract` (the Settlement address). The inclusion of `chainId` in the
-domain is what prevents a signature created for Base from being replayed on any other chain.
-
-### INTENT_TYPEHASH (6 fields)
-
-```solidity
-bytes32 public constant INTENT_TYPEHASH = keccak256(
-    "Intent(uint256 nonce,address user,address token,uint256 amount,uint256 destinationChainId,uint256 deadline)"
-);
-```
-
-Signed fields, in order: `nonce`, `user`, `token`, `amount`, `destinationChainId`, `deadline`.
-
-Implementation note: when computing the struct hash inside `lockIntent`, the contract encodes
-`intent.agent` into the `user` slot of the type. `outputToken` is **not** part of this typehash;
-output validation is performed off-chain by the relayer witness before a voucher is issued.
+`EIP712("VynxSettlement", "1")` — used exclusively for vouchers. The domain separator commits
+to the name, version, `chainId`, and `verifyingContract` (the Settlement address). The
+inclusion of `chainId` in the domain is what prevents a voucher signed for Base from being
+replayed on any other chain.
 
 ### VOUCHER_TYPEHASH (3 fields)
 
@@ -227,13 +240,27 @@ that matches the pre-computed nonce offsets:
 | n+0 | `VynxToken` | owner = multisig |
 | n+1 | `VynxAdmin` (implementation) | — (`_disableInitializers` in constructor) |
 | n+2 | `ERC1967Proxy` (the live admin) | `initialize(relayerSigner, watchdog, multisig, takeRateBps)` |
-| n+3 | `StakingRewards` | `(USDC, VynxToken, predictedTreasury, adminProxy)` |
+| n+3 | `StakingRewards` | `(usdc, VynxToken, predictedTreasury, adminProxy)` |
 | n+4 | `VynxTreasury` | `(adminProxy, predictedSettlement, stakingRewards, keeper, multisig)` |
-| n+5 | `VynxSettlement` | `(adminProxy, treasury, takeRateBps)` |
+| n+5 | `VynxSettlement` | `(adminProxy, treasury, takeRateBps, usdc)` |
 
 After deployment, the multisig calls
 `adminProxy.setContractAddresses(settlement, treasury, stakingRewards)`.
-`USDC_BASE = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`; `DEFAULT_TAKE_RATE_BPS = 10`.
+
+The `usdc` constructor argument (the settlement's **immutable** input token and EIP-3009
+custody contract) is resolved by the script from `block.chainid`:
+
+| Chain | ID | USDC |
+| --- | --- | --- |
+| Base Mainnet | 8453 | `USDC_BASE = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| Base Sepolia | 84532 | `USDC_BASE_SEPOLIA = 0x036CbD53842c5426634e7929541eC2318f3dCF7e` (Circle official, Q8-verified EIP-3009 capable) |
+
+Any other chain aborts the deploy. `DEFAULT_TAKE_RATE_BPS = 10`.
+
+Deployed addresses (Base Sepolia testnet, FASE 1 close-out) are recorded in
+[`docs/deployments.md`](deployments.md), together with the post-deploy smoke cycle —
+one real EIP-3009 gasless lock followed by a post-deadline refund
+(`script/SmokeTestnet.s.sol`).
 
 ### Ethereum L1 (`script/DeployL1.s.sol`)
 
@@ -269,7 +296,7 @@ After deployment, the multisig calls
 | VynxAdmin | `setMultisig` | `multisig` |
 | VynxAdmin | `setContractAddresses` | `multisig` |
 | VynxAdmin | `upgradeTo` / `_authorizeUpgrade` | `multisig` |
-| VynxSettlement | `lockIntent` | Permissionless (requires valid relayer signature) |
+| VynxSettlement | `lockIntent` | Winning solver only (`msg.sender == intent.solver`, §D5 Option A; requires the agent's valid EIP-3009 authorization) |
 | VynxSettlement | `claimFunds` | Permissionless (requires valid relayer voucher) |
 | VynxSettlement | `refundIntent` | Permissionless (after deadline) |
 | VynxSettlement | `syncConfig` | `admin` (VynxAdmin) |
@@ -295,9 +322,12 @@ halt the protocol while only the high-privilege board can resume it.
 The on-chain contracts rely on two off-chain actors whose implementation lives in separate
 repositories:
 
-- **Relayer** — observes intents, validates the destination-chain payment via an integrity
-  witness (correct output token, recipient equal to the agent, value at or above the minimum),
-  signs EIP-712 intents and vouchers with the relayer key, and submits them.
+- **Relayer** — validates submitted intents (input chain, token, destination whitelist,
+  MIN/MAX, deadline) and the agent's EIP-3009 authorization, orchestrates the sealed 200 ms
+  auction, validates the destination-chain payment via an integrity witness (correct output
+  token, recipient equal to the agent, value at or above the **agent-signed**
+  `minOutputAmount`), and signs **vouchers only** with the relayer key — it no longer signs
+  intents and cannot alter their terms.
 - **Keeper Bot** — holds `KEEPER_ROLE` on the L1 registry and the keeper role on the L2
   treasury; triggers slashing on default and orchestrates yield distribution and agent
   compensation.

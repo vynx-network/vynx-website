@@ -19,6 +19,12 @@ cp .env.example .env
 The SDK never reads your private key from the environment — you construct the
 viem account yourself and pass the resulting `walletClient` to `VynxCore`.
 
+**The agent wallet needs no ETH.** The swap path is gasless: the wallet signs
+one off-chain EIP-3009 authorization and sends zero transactions — the winning
+solver executes the on-chain lock and pays all gas. The RPC endpoint is used for
+read-only calls (USDC balance pre-flight, escrow status) and for the
+recovery-path refund, the only transaction the SDK can ever send.
+
 ## 2. Instantiating VynxCore
 
 `VynxCore` requires a viem `WalletClient` and `PublicClient` configured for Base
@@ -79,15 +85,19 @@ try {
 ```
 
 `executeSwap()` is a single call, but it drives a full state machine on your
-behalf — including the **autonomous on-chain lock**: once a solver is matched, the
-SDK calls `lockIntent` from your wallet automatically. **You never call lock
-yourself.** Your wallet signs exactly two transactions per swap: `approve()`
-(exact allowance — never unlimited) and `lockIntent()`. It never signs EIP-712
-typed data directly. The full lifecycle:
+behalf — and it is **gasless for the agent**: your wallet signs exactly **one**
+EIP-3009 `ReceiveWithAuthorization` typed-data authorization per swap (zero gas,
+zero transactions) and the winning solver executes the on-chain lock from its
+own wallet, paying all gas. The full lifecycle:
 
 ```
-balance/allowance → build request → submit → await match → LOCK (auto) → await settlement → resolve
+balance (read-only) → build terms → sign authorization (off-chain) → submit → await match (solver locks) → await settlement → resolve
 ```
+
+If you sign through a remote/JSON-RPC signer (e.g. a wallet UI), the typed-data
+prompt shows USDC's **own** EIP-712 domain — name `"USD Coin"` on Base mainnet,
+`"USDC"` on Base Sepolia — not a VynX domain. That is expected: the
+authorization is verified by the USDC contract itself.
 
 If the solver does not settle before the ~15-minute deadline, the SDK calls
 `refundIntent()` on-chain automatically and rejects with `ERR_SWAP_TIMEOUT`,

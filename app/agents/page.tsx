@@ -12,7 +12,7 @@ import IntentStateMachine from "@/components/docs/diagrams/IntentStateMachine";
 export const metadata = {
   title: { absolute: "VynX · Agents Integration" },
   description:
-    "Integration guide for AI agents on VynX. SDK reference, EIP-712 payload, intent lifecycle, and error handling.",
+    "Integration guide for AI agents on VynX. SDK reference, EIP-3009 signed terms, intent lifecycle, and error handling.",
 };
 
 const agentNav = [
@@ -21,7 +21,7 @@ const agentNav = [
       { label: "Overview", href: "#overview" },
       { label: "Quick Start", href: "#quick-start" },
       { label: "SDK Reference", href: "#sdk-reference" },
-      { label: "EIP-712 Payload", href: "#eip-712-payload" },
+      { label: "Signed Terms", href: "#eip-712-payload" },
       { label: "Intent Lifecycle", href: "#intent-lifecycle" },
       { label: "Error Handling", href: "#error-handling" },
       { label: "FAQ", href: "#faq" },
@@ -29,7 +29,7 @@ const agentNav = [
   },
 ];
 
-const flowSteps = ["SUBMIT", "AUCTION", "LOCK", "PAY", "SETTLE"];
+const flowSteps = ["SIGN", "AUCTION", "LOCK", "PAY", "SETTLE"];
 
 const methodColClass = "grid grid-cols-[160px_1fr]";
 
@@ -54,37 +54,37 @@ const payloadFields = [
   {
     field: "intentId",
     type: "bytes32",
-    desc: "Unique identifier. Derived on submission.",
+    desc: "Unique identifier, derived off-chain. Hashed into the nonce.",
     goldField: false,
   },
   {
     field: "agent",
     type: "address",
-    desc: "Intent originator. Your signing address.",
+    desc: "Intent originator. Your signing address — and the recipient.",
     goldField: false,
   },
   {
     field: "token",
     type: "address",
-    desc: "Must be USDC on Base (0x833589...).",
+    desc: "Must be USDC on Base (0x833589...). Immutable token lock.",
     goldField: true,
   },
   {
-    field: "amount",
+    field: "inputAmount",
     type: "uint256",
     desc: "In USDC base units (6 decimals). Min: 50e6.",
     goldField: false,
   },
   {
-    field: "solver",
+    field: "outputToken",
     type: "address",
-    desc: "Winning Solver. Assigned by the Relayer.",
+    desc: "Token delivered on the destination chain.",
     goldField: false,
   },
   {
-    field: "nonce",
+    field: "minOutputAmount",
     type: "uint256",
-    desc: "Replay protection. Incremented per intent.",
+    desc: "Minimum acceptable output. Agent-signed; witness-validated.",
     goldField: false,
   },
   {
@@ -96,7 +96,7 @@ const payloadFields = [
   {
     field: "deadline",
     type: "uint256",
-    desc: "Unix timestamp. Default: now + 15 min.",
+    desc: "Unix timestamp. Default: now + 15 min. Enforced by USDC.",
     goldField: false,
   },
 ];
@@ -117,7 +117,7 @@ const lifecycleRows = [
   {
     status: "LOCKED",
     statusClass: "font-mono text-[12px] text-vynx-muted",
-    desc: "SDK executed lockIntent() from the agent wallet. Funds locked on Base.",
+    desc: "Winning Solver executed lockIntent() from its own address. Funds locked on Base.",
   },
   {
     status: "SETTLED",
@@ -127,7 +127,7 @@ const lifecycleRows = [
   {
     status: "EXPIRED",
     statusClass: "font-mono text-[12px] text-vynx-muted",
-    desc: "Deadline (15 min) passed without fill. Refund automatic.",
+    desc: "Deadline (15 min) passed without fill. refundIntent() is permissionless — funds return to the agent.",
   },
 ];
 
@@ -146,7 +146,7 @@ const agentFaqItems: FaqItem[] = [
   },
   {
     q: "Do I need ETH for gas?",
-    a: "Yes — Base ETH for two transactions per swap: approve() and lockIntent(). You never pay destination-chain gas; the Solver's delivery is its own transaction, internalized in the bid spread.",
+    a: "No. You sign one EIP-3009 authorization off-chain and send zero transactions. The winning Solver executes the on-chain lock from its own address and bears all gas; its destination delivery is its own transaction. If no fill lands by the deadline, refundIntent() is permissionless — any funded wallet can return your capital.",
   },
 ];
 
@@ -199,7 +199,7 @@ const errorClasses: ErrorClass[] = [
       },
       {
         code: "VYNX_2002_SYSTEM_UNAVAILABLE",
-        desc: "Relayer unreachable, returned a non-OK status, the approve transaction failed, or maxExecutionTimeMs elapsed — which aborts the settlement poller. Retry with backoff; check getSwapStatus() before re-submitting.",
+        desc: "Relayer unreachable, returned a non-OK status, or maxExecutionTimeMs elapsed — which aborts the settlement poller. Retry with backoff; check getSwapStatus() before re-submitting.",
       },
     ],
   },
@@ -209,7 +209,7 @@ const errorClasses: ErrorClass[] = [
     rows: [
       {
         code: "VYNX_3001_SWAP_TIMEOUT",
-        desc: "Locked but the solver did not settle in 15 min. The SDK called refundIntent() and confirmed it on-chain.",
+        desc: "Locked but the solver did not settle in 15 min. The intent was refunded on-chain and the full amount returned to the agent.",
       },
     ],
   },
@@ -220,7 +220,7 @@ const errorClasses: ErrorClass[] = [
     rows: [
       {
         code: "VYNX_9001_REFUND_UNRECOVERABLE",
-        desc: "Three refundIntent() attempts failed. Capital is locked — call refundIntent() manually after the deadline.",
+        desc: "Automatic refund attempts did not confirm. refundIntent() is permissionless after the deadline — any funded wallet can recover the capital.",
       },
       {
         code: "VYNX_9999_INTERNAL",
@@ -248,8 +248,10 @@ export default function AgentsPage() {
             In VynX, an agent is any autonomous system that submits intents.
             There are no wallet popups, no brand preferences, no onboarding
             fatigue. An intent is an instruction — swap X USDC for Y token —
-            validated and signed (EIP-712) by the Relayer. The protocol handles
-            routing, settlement, and guarantees.
+            whose eight terms are cryptographically the agent&rsquo;s, bound by
+            one EIP-3009 signature. The Relayer validates and orchestrates the
+            auction; it cannot alter what the agent signed. The protocol
+            handles routing, settlement, and guarantees.
           </p>
         </div>
 
@@ -270,10 +272,12 @@ export default function AgentsPage() {
 
         <Card className="mt-6">
           <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed">
-            The agent wallet submits two Base transactions per swap — approve()
-            and lockIntent() — and pays their gas. The destination-chain
-            payment is the Solver&rsquo;s own transaction; its gas is
-            internalized in the bid spread.
+            The agent signs one EIP-3009 authorization off-chain and sends
+            zero transactions. The winning Solver executes lockIntent() from
+            its own address and bears all gas, including the destination-chain
+            payment. If the deadline passes with no fill, recovery is
+            permissionless — anyone can call refundIntent() to return the
+            agent&rsquo;s capital.
           </p>
         </Card>
 
@@ -423,23 +427,26 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
 
         <Card className="mt-2">
           <p className="font-body font-light text-[13px] text-vynx-muted leading-relaxed">
-            The SDK submits approve() — exact allowance, never unlimited — and
-            lockIntent() from the agent wallet. It does not hold capital, does
-            not sign EIP-712 typed data, and does not query oracles.
+            The SDK computes the terms hash and signs one EIP-3009 typed-data
+            authorization client-side — never an allowance, never a transaction
+            on the swap path. It does not hold capital and does not query
+            oracles.
           </p>
         </Card>
       </section>
 
       {/* ── EIP-712 Payload ── */}
       <section id="eip-712-payload" className="mb-20">
-        <SectionLabel>EIP-712 PAYLOAD</SectionLabel>
+        <SectionLabel>SIGNED TERMS</SectionLabel>
         <h2 className="font-display text-[36px] leading-none text-white mb-8">
           INTENT STRUCTURE
         </h2>
         <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
-          Every intent is an EIP-712 typed data payload. The Relayer validates
-          and signs the struct; lockIntent() verifies that signature on-chain.
-          The Solver bids.
+          Every intent is eight terms the agent signs as one EIP-3009
+          authorization; the authorization nonce is the keccak256 hash of all
+          eight. A changed term breaks the recomputed nonce — the Relayer
+          cannot alter what the agent signed. lockIntent() re-derives the nonce
+          and Circle&rsquo;s USDC verifies the signature on-chain.
         </p>
 
         <div className="overflow-x-auto">
@@ -586,7 +593,9 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
             </div>
             <p className="font-body font-light text-[13px] text-vynx-muted leading-relaxed mb-4">
               Intent rejected before auction if: inputToken ≠ USDC, inputAmount
-              &lt; 50 USDC, no eligible Solvers (SHF), or agent nonce reused.
+              &lt; 50 USDC, no eligible Solvers (SHF), or the agent&rsquo;s
+              authorization fails verification at intake — a tampered term
+              changes the recomputed nonce and is rejected.
             </p>
             <p className="font-mono text-[11px] text-vynx-faint">
               Check payload. Retry with corrected parameters.

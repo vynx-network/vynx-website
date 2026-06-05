@@ -5,11 +5,15 @@
 > tracks the code.
 
 VynX is a **200ms sealed-bid Order-Flow Auction (OFA)** settlement layer for AI-agent
-cross-chain transfer intents on Base L2. An agent locks USDC on Base, competitive
-solvers bid to fulfil the transfer on a destination chain, the winner pays the agent
-off-chain, a witness verifies that payment, and the solver redeems an EIP-712 voucher
-for the agent's locked funds (minus a take-rate). Deadline misses are refunded and
-slashed by an independent watchdog.
+cross-chain transfer intents on Base L2. An agent signs a **single off-chain EIP-3009
+authorization** over all its trade terms (gasless — the agent never sends a
+transaction), competitive solvers bid to fulfil the transfer on a destination chain,
+the **winning solver locks the agent's USDC on Base** (`lockIntent(intent, auth)`,
+paying the gas) and pays the agent on the destination chain, a witness verifies that
+payment, and the solver redeems an EIP-712 voucher for the agent's locked funds
+(minus a take-rate). Deadline misses are refunded and slashed by an independent
+watchdog. The relayer only **validates and orchestrates** — it cannot alter the
+agent's terms (GASLESS REDESIGN, trust-minimized single signature).
 
 ---
 
@@ -34,38 +38,69 @@ governance, and staking live on **Base L2** (`VynxSettlement`, `VynxTreasury`,
 
 ## 2. The intent lifecycle
 
-### Happy path
+### Happy path (GASLESS REDESIGN)
 
-1. **Lock** — the agent calls `VynxSettlement.lockIntent` on Base L2, locking input
-   USDC (`IntentLocked`).
-2. **Intake** — the agent POSTs the intent to the Relayer, which verifies the EIP-712
-   agent signature (F1), checks the deadline (F2), runs the gatekeeper (USDC-only,
-   MIN/MAX, destination whitelist), and reserves TVL.
+1. **Submit** — the agent signs a **single EIP-3009 `ReceiveWithAuthorization`**
+   off-chain (free — no gas, no ETH needed) whose nonce is the keccak256 hash of
+   all eight trade terms, and POSTs the intent + the 65-byte authorization to the
+   Relayer. The agent is done — it sends no transaction, ever.
+2. **Intake** — the Relayer verifies the agent's authorization over the recomputed
+   terms-nonce (F1 — the relayer no longer signs intents and cannot alter the
+   terms), checks the deadline (F2), runs the gatekeeper (USDC-only, MIN/MAX,
+   destination whitelist), and reserves TVL.
 3. **Auction** — a **200ms** sealed-bid OFA runs entirely from RAM. Solvers bid the
-   output amount they will deliver; the highest `OutputAmount` wins (HealthFactor
-   tie-break). First-bid-per-solver wins (F3).
-4. **Fulfilment** — the winning solver pays the agent on the **destination chain**
-   (the `AuctionWonFrame` carries agent, output token, min output).
-5. **Witness** — the Relayer's Cold Path validates that destination-chain payment
+   output amount they will deliver (blind on the public terms — the authorization
+   is never broadcast); the highest `OutputAmount` wins (HealthFactor tie-break).
+   First-bid-per-solver wins (F3).
+4. **Lock** — the **winning solver** receives the unicast `AuctionWonFrame` (all 8
+   agent-signed terms + the authorization — the FASE 3→4 contract, consumer flow
+   in [`solver.md`](solver.md)), **acks it** (Sprint 4.3: the ack — or a
+   winner-authenticated `GET /v1/won` pull, or the lock itself — is what arms
+   the 10s SLA clock; an unacked frame is re-pushed bounded times, then the win
+   is forfeited to the next-best bid or the intent fails, and the original
+   winner is NOT jailed — the SLA only penalizes what the solver controls), and
+   calls `VynxSettlement.lockIntent(intent, auth)` on Base L2, **paying the
+   gas** — one lock attempt per win, never retried, self-aborted without gas if
+   `slaExpiry` already elapsed. Circle USDC verifies the agent's signature and
+   pulls the input USDC into escrow (`IntentLocked`; the Relayer's watcher
+   flips the intent to `LOCKED`). Missing the ack-armed 10s SLA jails the
+   solver — the actor that actually controls both the ack and the lock.
+   Since Sprint 4.1 the e2e happy path executes this lock **for real** against a
+   harness-deployed `VynxSettlement` + EIP-3009 USDC.
+5. **Fulfilment** — the winning solver pays the agent on the **destination chain**
+   and reports the tx via `POST /v1/payment-notice` (accepted in `MATCHED` or
+   `LOCKED` state — the lock precedes the payment under the gasless ordering).
+6. **Witness** — the Relayer's Cold Path validates that destination-chain payment
    against `MinOutputAmount` and the agent recipient, after chain-specific finality.
-6. **Voucher** — the Relayer requests an EIP-712 voucher `(intentId, solver, amount)`
-   from the Signer over UDS, and the solver redeems it via `claimFunds` on Base L2,
-   receiving the agent's locked USDC minus the take-rate (to `VynxTreasury`).
+7. **Voucher** — the Relayer requests an EIP-712 voucher `(intentId, solver, amount)`
+   from the Signer over UDS (intent `SETTLED`) and unicasts a `voucher_ready`
+   signal to the winner (Sprint 4.3 push-then-pull — no fixed poll budget
+   against unknown destination finality). On that signal the winning solver
+   **pulls** the voucher from `GET /v1/voucher/{intentId}` (EIP-191 winner
+   challenge; served only between settlement and redemption, signature served
+   on-chain-ready with v ∈ {27,28} — Sprint 4.2/4.3, consumer flow in
+   [`solver.md`](solver.md) §6) and redeems it via **one** `claimFunds` on Base
+   L2, paying gas, receiving the agent's locked USDC minus the take-rate (to
+   `VynxTreasury`). `VoucherRedeemed` is watched (G13) and archives the intent.
+   Since Sprint 4.2 the e2e happy path runs this **full loop for real** — and
+   since Sprint 4.3 ack-armed and signal-driven — lock → destination payment →
+   witness → voucher_ready → voucher pull → `claimFunds` → `REDEEMED`, with
+   the net/fee split asserted on-chain.
 
 ### Failure path (deadline miss)
 
-7. **Refund** — if the solver misses the deadline, the Watchdog's deadline sweeper
+8. **Refund** — if the solver misses the deadline, the Watchdog's deadline sweeper
    (driven by the **chain clock**, §4) transitions the intent and W4 calls
    `VynxSettlement.refundIntent` on Base L2 — the agent is made whole.
-8. **Slash** — when conditions are met, W5 calls `VynxRegistry.executeSlash` on
+9. **Slash** — when conditions are met, W5 calls `VynxRegistry.executeSlash` on
    Ethereum L1 **via Flashbots** (`SolverSlashed`): the slashed collateral is split
    **5% to the agent, 5% to the treasury, on-chain** (BLINDAJE A.1).
 
 ### Weekly reconciliation
 
-9. The **Keeper** JOINs the prior week's L1 `SolverSlashed` and L2 `IntentRefunded`
-   events and broadcasts `distributeRealYield` on Base L2 (and, only if the gated
-   `KEEPER_AGENT_COMPENSATION` flag is on, `batchCompensate`). No bridge (Invariant 5).
+10. The **Keeper** JOINs the prior week's L1 `SolverSlashed` and L2 `IntentRefunded`
+    events and broadcasts `distributeRealYield` on Base L2 (and, only if the gated
+    `KEEPER_AGENT_COMPENSATION` flag is on, `batchCompensate`). No bridge (Invariant 5).
 
 ---
 
@@ -93,7 +128,10 @@ leader-only goroutine that advances each watched chain's clock every 2s from
 `head − confirmationsFor(chain)` (Base 2, Eth 12, Arb 1, Opt 2, Polygon 256), via a
 monotonic Lua script. W8 is **newly wired and now live**: before it, the clock was
 never written in production and the sweeper skipped every chain, so deadline-driven
-refunds never fired. See [`watchdog.md`](watchdog.md) §4.
+refunds never fired. A **sanity clamp** rejects any candidate `block.timestamp`
+implausibly far in the future (`> now + 120s`) *before* the monotonic guard, so a
+faulty RPC cannot poison the clock and trigger a refund flood. See
+[`watchdog.md`](watchdog.md) §4.
 
 ---
 

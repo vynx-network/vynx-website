@@ -54,7 +54,7 @@ const items: ChecklistItemProps[] = [
   },
   {
     title: "@vynx/sdk",
-    subtitle: "TypeScript SDK — EIP-712 fidelity",
+    subtitle: "TypeScript SDK — EIP-3009 fidelity",
     link: {
       href: "https://www.npmjs.com/package/@vynx/sdk",
       label: "↗ npm",

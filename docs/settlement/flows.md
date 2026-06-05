@@ -6,29 +6,37 @@ are coordinated only by the off-chain relayer and Keeper Bot.
 
 ---
 
-## 1. Intent Lock (Base L2)
+## 1. Intent Lock (Base L2) — gasless EIP-3009 custody
 
-The agent's funds are pulled into the Settlement escrow after the relayer's EIP-712 intent
-signature is verified against the live relayer key.
+The agent signs **one** EIP-3009 `ReceiveWithAuthorization` off-chain (zero gas, no
+`approve`) whose nonce is the keccak256 hash of all trade terms (§D2). The **winning solver**
+executes `lockIntent` from its own address and pays all gas (§D5 Option A). The contract
+recomputes the nonce from the submitted terms — never from calldata — and Circle's audited
+USDC verifies the agent's signature: any tampered term makes the lock impossible. The §D3.6
+canonical CEI order is pinned: **effects before interaction**.
 
 ```mermaid
 sequenceDiagram
     actor Agent
+    participant Solver as Winning Solver
     participant Settlement as VynxSettlement
-    participant Admin as VynxAdmin
-    participant Token as ERC-20 (USDC)
+    participant USDC as USDC (Circle, Base)
 
-    Agent->>Settlement: lockIntent(intent, relayerSig)
-    Settlement->>Settlement: require !paused
-    Settlement->>Settlement: require intents[id].state == UNKNOWN
-    Settlement->>Settlement: structHash = keccak256(INTENT_TYPEHASH, nonce, agent, token, amount, destinationChainId, deadline)
-    Settlement->>Admin: relayerKey() (read source of truth)
-    Admin-->>Settlement: relayerKey
-    Settlement->>Settlement: require ECDSA.recover(digest, sig) == relayerKey
-    Settlement->>Settlement: deadline = now + DEFAULT_DEADLINE (900s); state = LOCKED
-    Settlement->>Token: safeTransferFrom(agent, settlement, amount)
-    Token-->>Settlement: amount escrowed
-    Settlement-->>Agent: emit IntentLocked(id, agent, solver, token, amount, deadline)
+    Agent->>Agent: nonce = keccak256(abi.encode(DOMAIN_TAG, 8 terms))
+    Agent->>Agent: sign EIP-3009 ReceiveWithAuthorization (USDC domain) — ZERO GAS
+    Agent-->>Solver: intent + authorization (via relayer auction, off-chain)
+    Solver->>Settlement: lockIntent(intent, auth) — SOLVER PAYS GAS
+    Settlement->>Settlement: 1. require !paused
+    Settlement->>Settlement: 2. require intents[id].state == UNKNOWN
+    Settlement->>Settlement: 3. require intent.token == usdc (immutable token lock)
+    Settlement->>Settlement: 4. require intent.inputAmount > 0
+    Settlement->>Settlement: 5. require msg.sender == intent.solver (Option A)
+    Settlement->>Settlement: 6. expectedNonce = IntentNonceLib.computeNonce(8 terms)
+    Settlement->>Settlement: 7. EFFECTS FIRST (CEI): write escrow (solver = msg.sender, deadline = now+900) → LOCKED
+    Settlement->>USDC: 8. receiveWithAuthorization(agent, this, inputAmount, 0, intent.deadline, expectedNonce, v, r, s)
+    USDC->>USDC: verify AGENT signature (audited Circle code), mark nonce used
+    USDC-->>Settlement: transfer inputAmount agent → escrow (revert ⇒ whole tx unwinds)
+    Settlement-->>Solver: 9. emit IntentLocked(id, agent, msg.sender, token, inputAmount, deadline)
 ```
 
 ---

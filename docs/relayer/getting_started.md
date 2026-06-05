@@ -50,10 +50,10 @@ Four flows live in `e2e/tests/`:
 
 | Test | Status | Notes |
 |---|---|---|
-| `happy_path` | **PASS** | Intake → auction → witness → voucher → settle. |
+| `happy_path` | **PASS** | The FULL gasless loop (Sprint 4.2): intake (F1 verify) → auction → the solver executes the REAL `lockIntent(intent, auth)` on a harness-deployed `VynxSettlement` (escrow pulled via `receiveWithAuthorization`) → destination payment → witness → SETTLED → winner-gated voucher pull (`GET /v1/voucher`, EIP-191 challenge; non-winner 403 / pre-settlement 404 probed) → ONE `claimFunds` from the solver's key → on-chain REDEEMED with the 10 bps net/fee split and the post-redemption 404 asserted. |
 | `keeper_path` | **PASS** | Weekly epoch reconciliation (DynamoDB Local). |
 | `refund_clock_path` | **PASS** | The W8 chain-clock proof — the FinalityWatcher advances `latest_safe_ts` from real `block.timestamp`s and drives a deadline refund. |
-| `slash_path` | **FAILS (known)** | The local harness fronts Anvil over **HTTP**, which lacks `eth_subscribe`; the Watchdog can't subscribe to `IntentLocked`. The slash mechanism is covered by the sibling `vynx-e2e` suite. This is a local-harness gap, not a protocol gap. |
+| `slash_path` | **PASS** | Re-enabled in Sprint 4.1: the harness now fronts Anvil over **WebSocket** (`Env()` exports ws:// RPC URLs), the Redis fixture matches the W7 payload schema (`inputAmount`/`agent`), and the StubRegistry was recompiled with the real 6-field `SlashPayload` tuple. W5 executes the slash and `SolverSlashed` is asserted on the Eth fork. |
 
 > `TVL_CAP_USDC` is mandatory at relayer boot (`mustU64Env`). The `make e2e-local`
 > harness now injects it automatically (`e2e/harness/harness.go` `Env()` — 10,000

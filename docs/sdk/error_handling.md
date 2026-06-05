@@ -26,10 +26,10 @@ try {
 
 ## Error Reference
 
-### 1xxx — Pre-execution (no on-chain side-effects)
+### 1xxx — Pre-execution (no side-effects)
 
-These errors fire before any transaction is sent. Capital is never at risk. Fix
-the input and retry immediately.
+These errors fire before anything is signed or submitted. Capital is never at
+risk. Fix the input and retry immediately.
 
 **`VYNX_1001_INSUFFICIENT_FUNDS`**
 Agent USDC balance is lower than `amountUSD`.
@@ -54,7 +54,7 @@ Options: use a different `targetToken`, or inject a custom `quoter` in
 
 ### 2xxx — Execution failed, no capital at risk
 
-These errors occur before the on-chain lock. Capital is never at risk.
+These errors occur before any capital movement. Capital is never at risk.
 
 **`VYNX_2001_NO_LIQUIDITY`**
 No solver was matched within the polling window, or the intent failed pre-lock.
@@ -64,12 +64,13 @@ relayer reason: `no_bids`, `sla_timeout`, `deadline_expired`, or `relayer_halt`.
 `sla_timeout`.)
 
 **`VYNX_2002_SYSTEM_UNAVAILABLE`**
-The relayer was unreachable, returned a non-OK status, the `approve` transaction
-failed/reverted, or the optional `maxExecutionTimeMs` bound elapsed. When the
-bound elapses the SDK **aborts the in-flight settlement poller** (it stops
-polling and fires no background refund). Retry with exponential backoff. Do
-**not** blindly re-submit a call that timed out mid-flight — the intent may
-already be locked on-chain; check it with `getSwapStatus()` first. Capital is not
+The relayer was unreachable, rejected the submission (e.g. an authorization that
+fails its off-chain verification — `err.context.status` carries the HTTP
+status), or the optional `maxExecutionTimeMs` bound elapsed. When the bound
+elapses the SDK **aborts the in-flight settlement poller** (it stops polling and
+fires no background refund). Retry with exponential backoff. Do **not** blindly
+re-submit a call that timed out mid-flight — the solver may already have locked
+the intent on-chain; check it with `getSwapStatus()` first. Capital is not
 stranded: `refundIntent` stays permissionless once the on-chain deadline passes.
 
 ---
@@ -77,9 +78,9 @@ stranded: `refundIntent` stays permissionless once the on-chain deadline passes.
 ### 3xxx — Execution failed, capital recovered automatically
 
 **`VYNX_3001_SWAP_TIMEOUT`**
-The intent was locked on-chain but the solver did not settle within the ~15-minute
-deadline. The SDK automatically called `refundIntent()` and confirmed the refund
-on-chain — your USDC has been returned.
+The winning solver locked the escrow on-chain but did not settle within the
+~15-minute deadline. The SDK automatically called `refundIntent()` and confirmed
+the refund on-chain — your USDC has been returned.
 
 ```typescript
 case VynxErrorCode.ERR_SWAP_TIMEOUT:
@@ -89,6 +90,14 @@ case VynxErrorCode.ERR_SWAP_TIMEOUT:
 ```
 
 No further action needed.
+
+> **Gas note (the one exception to gasless):** the automatic `refundIntent()` is
+> the only transaction the SDK can ever send, and it is sent from the agent
+> wallet — so this recovery path is the one operation that needs ETH. If the
+> agent wallet holds none, the automatic refund fails into
+> `ERR_REFUND_UNRECOVERABLE` below — but capital is still recoverable:
+> `refundIntent` is **permissionless** after the deadline, so any funded wallet
+> can execute it and the USDC always returns to the agent.
 
 ---
 
@@ -137,9 +146,12 @@ still be locked in the settlement contract.
    transaction hashes from `err.context`.
 
 **`VYNX_9999_INTERNAL`**
-Unexpected SDK error (e.g. a malformed relayer response, or a misconfigured
-wallet account). Capital is not at risk. Open an issue with the full error and
-`err.context`.
+Unexpected SDK error — e.g. a malformed relayer response, a misconfigured wallet
+account (`walletClient` without an account), or a failure while signing the
+EIP-3009 transfer authorization (the signer rejected the typed-data request;
+`err.context.reason` carries the cause — a signing failure happens before
+anything is submitted). Capital is not at risk. Open an issue with the full
+error and `err.context`.
 
 ---
 

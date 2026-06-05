@@ -18,7 +18,9 @@ reset.
 | Export | Purpose |
 |---|---|
 | `takeSnapshot(rpcUrl)` | `evm_snapshot` → snapshot id |
-| `revertSnapshot(rpcUrl, id)` | `evm_revert` (30 s timeout guard) **then** `resetChainClocks()` |
+| `revertSnapshot(rpcUrl, id)` | `evm_revert` (30 s guard) → `resetChainClocks()` → re-anchor the reverted chain forward onto wall (forward-only, 8 s-budgeted; keeps the shared Base anvil from accumulating behind-drift) |
+| `getTransactionCount` / `getEthBalance(rpcUrl, addr)` | agent nonce / native balance — the zero-agent-transaction (gasless) assertion |
+| `findIntentLockedTx` / `findVoucherRedeemedTx(rpcUrl, settlement, intentId)` | recover the lock/claim tx from the settlement event → assert `from` is the winning solver (gas reassignment) |
 | `setNextBlockTimestamp(rpcUrl, ts)` / `mineBlock(rpcUrl)` | warp time + mine (the +16 min deadline crossing) |
 | `mineBlocks(rpcUrl, count, intervalSec=0)` | advance block **number** without advancing time (confirmation depth) |
 | `setBalance(rpcUrl, addr, wei)` | `anvil_setBalance` (top up gas) |
@@ -71,7 +73,8 @@ solver logs `ws connected`.
 |---|---|
 | `startAllSolvers()` | the standard trio: a=undercut, b=midpoint, c=aggressive |
 | `startSolver(id, strategy)` | a single well-behaved solver |
-| `startNoFulfillSolver(id, strategy)` | `--no-fulfill` (never pays) |
+| `startNoFulfillSolver(id, strategy)` | `--no-fulfill` (win → ack → NEVER lock → `sla_expired` jail) |
+| `startLockOnlySolver(id, strategy)` | `--lock-only` (win → ack → real `lockIntent` → skip the destination payment) |
 | `startWrongTokenSolver(id, strategy, addr)` | `--wrong-token-address` |
 | `startWrongRecipientSolver(id, strategy, addr)` | `--pay-recipient` |
 | `startUnderpayingSolver(id, strategy, underpayBy, payMinimumOnly=true)` | `--underpay-by` + `--pay-minimum-only` |
@@ -81,7 +84,8 @@ solver logs `ws connected`.
 
 `Strategy = 'undercut' | 'midpoint' | 'aggressive'`. The `id` selects the solver wallet
 (`pickPk`): `solver-a/b/c`, `solver-refund`, `solver-race`, `solver-slash`, `solver-shf`,
-`solver-jail`, and the witness-boundary wallets.
+`solver-jail`, `solver-tvl` (dedicated — its never-settled lock takes a `deadline_expired`
+jail that must not leak into the shared trio), and the witness-boundary wallets.
 
 ---
 
@@ -95,11 +99,15 @@ solver logs `ws connected`.
 | `signVoucher(relayerKey, {intentId, solver, amount}, settlementAddress)` | EIP-712 voucher signature; matches the relayer (`VOUCHER_TYPEHASH` over 3 fields; domain `name="VynxSettlement"`, `version="1"`, `chainId=84532`) |
 | `callClaimFunds(callerPk, settlementAddress, voucher, rpcUrl)` | submits `claimFunds(voucher)`; any funded key works (signature, not msg.sender, is validated) |
 | `callRefundIntent(callerPk, settlementAddress, intentId, rpcUrl)` | **simulates** `refundIntent` and returns the decoded custom-error name (negative-path) |
+| `sendRefundIntent(callerPk, settlementAddress, intentId, rpcUrl)` | **broadcasts** the protocol's permissionless `refundIntent` and awaits the receipt — the refund/slash suites' trigger (keeper-sent, agent stays zero-tx) |
+| `callLockIntent(callerPk, settlementAddress, terms, authorization, rpcUrl)` | broadcasts the gasless `lockIntent(Intent, {v,r,s})` directly (caller = `intent.solver`) — the relayer-free lock for the refund/slash suites and the trust-min on-chain probe |
+| `warpPastEscrowDeadline(settlementAddress, intentId, rpcUrl, bufferSec=180)` | reads `escrow.deadline` on-chain and warps Base past it (drift-immune; replaces wall-based `now()+16min`) so `refundIntent` is callable |
+| `waitForEscrowState(settlementAddress, intentId, state, rpcUrl, timeout)` | polls `intents()` until the escrow reaches `state` (e.g. REDEEMED after the winner's own claim, REFUNDED after a refund) |
 
 Constants `INTENT_STATE_UNKNOWN/LOCKED/REDEEMED/REFUNDED` (0/1/2/3) mirror the on-chain
-`IntentState` enum. Note: settled escrows stay **LOCKED** on-chain in e2e (no keeper runs),
-which is why `readIntentEscrow` + `signVoucher` + `callClaimFunds` can drive the take-rate
-and voucher tests.
+`IntentState` enum. GASLESS: the winning solver claims its own voucher, so a settled escrow
+reaches **REDEEMED** on-chain (take-rate/voucher suites wait for REDEEMED and assert the
+post-claim math); a never-settled escrow reaches **REFUNDED** via `sendRefundIntent`.
 
 ---
 
@@ -110,7 +118,7 @@ All three pin to `baseSepolia` (chain-id 84532) and the local Base anvil.
 
 | File | Export | Surface |
 |---|---|---|
-| `agent-core.ts` | `executeSwap(params)` | `VynxCore.executeSwap` — used by the four protocol tests; errors propagate (no try/catch) so tests assert on `errorCode` |
+| `agent-core.ts` | `executeSwap(params)`, `await buildIntentTerms(overrides)`, `signIntentAuthorization(terms, pk?)`, `computeIntentNonce` | `executeSwap` wraps the REAL `VynxCore` (one EIP-3009 signature, zero txs). `buildIntentTerms` (async — its default `deadline` is chain-relative `block.timestamp + 900`) + `signIntentAuthorization` are the direct-signing path for the raw-intent/trust-min/vector tests, REUSING the SDK's §D2 primitives via the `@vynx/sdk/internal` subpath |
 | `agent-agentkit.ts` | `executeSwapViaAgentKit(params)` | `createVynxActionProvider().executeSwap` → parsed JSON. Imports `reflect-metadata` first (AgentKit decorators). No CDP env — local anvil only |
 | `agent-eliza.ts` | `executeSwapViaEliza(params)` | `createVynxPlugin()`; invokes the first registered action's `handler` → `{ success, destTxHash, ... }` |
 
@@ -127,9 +135,10 @@ Quoters: `local-quoter.ts` (`localQuoter`, 1:1) and `inflated-quoter.ts` (`infla
 
 | File | Exports | Purpose |
 |---|---|---|
-| `http-intent.ts` | `submitRawIntent(params)`, `randomIntentId()` | POST `/v1/intent` raw, bypassing SDK validation — drives the intake-guard tests |
+| `http-intent.ts` | `submitRawIntent(params)`, `randomIntentId()`, `getIntentStatus(id)`, `waitForIntentStatus(id, want, timeout)` | POST `/v1/intent` raw (8 terms + authorization) bypassing SDK validation — drives the intake-guard + trust-min tests; the status readers poll `GET /v1/intent/{id}` for the relayer's terminal (e.g. `FAILED`/`sla_expired`) without the SDK |
 | `process-lifecycle.ts` | `killRelayer`/`startRelayer`, `killWatchdog`/`startWatchdog`, `ensureRelayerAlive`/`ensureWatchdogAlive`, `killProcess`, `waitForLogLine` | kill/restart binaries via PID/manifest; used by the lifecycle suites |
 | `redis-utils.ts` | `zsetMembers(redisUrl, key)`, `waitForZsetNonEmpty(...)` | inspect the watchdog slash queue (`slash:pending`) |
+| `pg-utils.ts` | `readJailLevel(addr)`, `waitForJailLevel(addr, timeout)` | node-postgres read of `solver_health.jail_level` (via `POSTGRES_URL`) — the jail-time-sla-breach DB assertion |
 | `setup.ts` | (bootstrap, no exports) | one-shot funding: solver/agent wallets, solver collateral, real-USDC deals on the destination forks; run by `e2e.sh` Phase 4 |
 
 ---

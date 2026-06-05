@@ -274,11 +274,12 @@ Fraud verification (W7) is **fail-closed**: any error from the fraud check
 
 ## 9. Known gaps
 
-- **`slash_path` e2e-local fails** — the local harness fronts Anvil over **HTTP**,
-  which lacks `eth_subscribe`; W7 cannot subscribe to `IntentLocked`, so the
-  slash flow can't complete locally. The slash mechanism **is** covered by the
-  sibling `vynx-e2e` suite (`slash-path` + `slash-distribution`). This is a
-  local-harness limitation, not a protocol gap.
+- **`slash_path` e2e-local** — re-enabled (Sprint 4.1). The harness now fronts
+  Anvil over **WebSocket** (ws:// RPC URLs in `Env()`), so `eth_subscribe`
+  works; the test's Redis fixture was aligned to the W7 payload schema and the
+  StubRegistry recompiled with the real 6-field `SlashPayload`. The slash
+  mechanism is additionally covered by the sibling `vynx-e2e` suite
+  (`slash-path` + `slash-distribution`).
 - **Monotonic-clock hardening** — see §4.5.
 
 See also: [`architecture.md`](architecture.md), [`onchain_contracts.md`](onchain_contracts.md),

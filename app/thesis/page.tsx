@@ -363,15 +363,19 @@ export default function ThesisPage() {
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
               <p>
-                The agent&rsquo;s SDK executes{" "}
+                The winning Solver executes{" "}
                 <span className="font-mono text-[13px] text-white">
                   lockIntent()
                 </span>{" "}
-                on VynxSettlement.sol, carrying the Relayer&rsquo;s EIP-712
-                signature. The call locks the agent&rsquo;s capital on Base
-                before any destination-chain payment is made. The Origin Lock
-                is the atomic guarantee that eliminates the two primary attack
-                vectors against cross-chain settlement.
+                on VynxSettlement.sol from its own address, presenting the
+                agent&rsquo;s signed authorization. The eight trade terms are
+                bound by the agent&rsquo;s EIP-3009 signature — the Relayer
+                cannot alter them; any change breaks the recomputed nonce and
+                Circle&rsquo;s USDC rejects the lock. The call locks the
+                agent&rsquo;s capital on Base before any destination-chain
+                payment is made. The Origin Lock is the trust-minimized, atomic
+                guarantee that eliminates the two primary attack vectors
+                against cross-chain settlement.
               </p>
             </div>
 
@@ -613,8 +617,10 @@ export default function ThesisPage() {
 
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
               <p>
-                An agent operates indefinitely on 50 USDC plus Base gas for two
-                transactions per swap. The capital requirement for agentic
+                An agent operates indefinitely on 50 USDC and a single
+                off-chain signature per swap — zero transactions, zero gas. The
+                Solver bears all gas; recovery after a missed deadline is
+                permissionless. The capital requirement for agentic
                 participation collapses to the size of a single intent. The
                 network grows every time an agent framework ships a new plugin.
               </p>

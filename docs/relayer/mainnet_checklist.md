@@ -17,10 +17,13 @@ items and the **known follow-ups** that are not yet resolved.
 - [ ] `golangci-lint run ./...` — zero findings.
 - [ ] `go test -race ./...` — zero races, all pass.
 - [ ] `check-invariants` skill — all **12** invariants clean, exit 0.
-- [ ] `make e2e-local` — `happy_path`, `keeper_path`, `refund_clock_path` PASS.
-      `slash_path` fails **only** on the documented HTTP-anvil `eth_subscribe` gap
-      (confirm identical, not worse); slash is covered by the sibling `vynx-e2e`
-      suite (`slash-path` + `slash-distribution`).
+- [ ] `make e2e-local` — `happy_path` (the full gasless loop, Sprint 4.2:
+      real lock → SETTLED → winner-gated voucher pull → `claimFunds` →
+      on-chain REDEEMED with the net/fee split asserted), `keeper_path`,
+      `refund_clock_path`, and `slash_path` all PASS (the former HTTP-anvil
+      `eth_subscribe` gap was closed in Sprint 4.1 — the harness exports
+      ws:// RPC URLs). Slash is additionally covered by the sibling
+      `vynx-e2e` suite (`slash-path` + `slash-distribution`).
 
 ---
 

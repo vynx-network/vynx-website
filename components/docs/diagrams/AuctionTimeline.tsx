@@ -88,9 +88,10 @@ export default function AuctionTimeline() {
         </div>
       </div>
       <p className="font-body font-light text-[12px] text-vynx-faint leading-relaxed mt-4">
-        Not to scale. Miss the 200 ms window and your bid is simply discarded —
-        no penalty. If the origin lock does not land within the 10 s SLA, Jail
-        Time applies; miss the 15 min deadline and the position is slashed 10%.
+        Not to scale. Miss the 200 ms window and your bid is discarded — no
+        penalty. If the winning solver&rsquo;s lock does not land within the
+        10 s SLA, Jail Time applies; miss the 15 min deadline and the position
+        is slashed 10%.
       </p>
     </div>
   );

@@ -24,16 +24,40 @@ Common conventions across the codebase:
 
 ### `struct Intent`
 
+An intent is authorized by the agent via a **single EIP-3009 `receiveWithAuthorization`
+signature** whose nonce is the keccak256 hash of every signed term below (design doc §D1/§D2,
+implemented by `IntentNonceLib`). Tampering with any signed field changes the nonce `lockIntent`
+recomputes on-chain, which invalidates the agent's signature inside Circle's USDC.
+
+| Field | Type | Signed by agent? | Mechanism / Notes |
+| --- | --- | --- | --- |
+| `intentId` | `bytes32` | ✅ | Nonce hash. Unique identifier (derived off-chain). |
+| `agent` | `address` | ✅ (twice) | 3009 `from` + nonce hash. The authorizing agent wallet. |
+| `token` | `address` | ✅ | Nonce hash. MUST equal the settlement's immutable `usdc` (on-chain token lock, §D3.5). |
+| `inputAmount` | `uint256` | ✅ (twice) | 3009 `value` + nonce hash — double protection (§D3.3). USDC atomic units locked in escrow. |
+| `outputToken` | `address` | ✅ | Nonce hash. Token delivered on the destination chain. |
+| `minOutputAmount` | `uint256` | ✅ | Nonce hash. Minimum acceptable destination amount; the witness validates against agent-signed terms. |
+| `destinationChainId` | `uint256` | ✅ | Nonce hash. Target chain for the payment leg. |
+| `deadline` | `uint256` | ✅ (twice) | 3009 `validBefore` + nonce hash (§D4.2). Authorization cutoff, enforced by USDC. |
+| `solver` | `address` | ❌ | Orchestration metadata (post-auction winner). Provenance bound at lock time: `msg.sender == solver` is required and `msg.sender` is stored (§D5 Option A). |
+
+The legacy monotonic `nonce` field was dropped (§D1.4): replay is prevented by USDC's
+single-use authorization state plus the `IntentState` machine — a third counter added nothing.
+
+### `struct Authorization`
+
+The agent's EIP-3009 signature, transported by the winning solver into `lockIntent`.
+
 | Field | Type | Notes |
 | --- | --- | --- |
-| `intentId` | `bytes32` | Unique identifier (derived off-chain). |
-| `agent` | `address` | Originating AI agent wallet. Encoded as `user` in the EIP-712 struct hash. |
-| `token` | `address` | ERC-20 token to lock. |
-| `amount` | `uint256` | Amount to lock in escrow. |
-| `solver` | `address` | Winning solver assigned to fulfil the payment. |
-| `nonce` | `uint256` | Monotonic counter; prevents intent replay. |
-| `destinationChainId` | `uint256` | Target chain for the off-chain payment leg. |
-| `deadline` | `uint256` | EIP-712 signature validity cutoff. |
+| `v` | `uint8` | ECDSA recovery id (27 or 28 — Circle rejects all other values). |
+| `r` | `bytes32` | ECDSA signature r component. |
+| `s` | `bytes32` | ECDSA signature s component (low-s enforced by Circle's ECRecover). |
+
+Only the raw signature travels. The rest of the 3009 envelope is derived, never transported:
+`from = intent.agent`, `to = settlement` (hardcoded), `value = intent.inputAmount`,
+`validAfter = 0` (protocol constant), `validBefore = intent.deadline`, and the nonce is always
+recomputed on-chain from the intent terms.
 
 ### `struct IntentEscrow`
 
@@ -77,6 +101,67 @@ Common conventions across the codebase:
 | `inputAmount` | `uint256` | Defaulted order input; the 10% total and 5%/5% split are derived from this on-chain. |
 | `issuedAt` | `int64` | Timestamp the Keeper Bot issued the payload. |
 | `signature` | `bytes` | ECDSA signature retained for off-chain audit trails. **Not verified on-chain.** |
+
+---
+
+## IntentNonceLib — `src/lib/IntentNonceLib.sol`
+
+Gasless-redesign primitive (Sprint 1.1, purely additive — not yet consumed by
+`VynxSettlement`; the custody rewrite lands in Sprint 1.2). Computes the EIP-3009
+authorization nonce as the keccak256 hash of all agent-signed trade terms, prefixed by a
+protocol domain tag. The nonce is never transported as calldata: the settlement contract
+recomputes it from the submitted intent fields, so tampering with any term invalidates the
+agent's signature.
+
+**Schema source of truth:** `docs/design/GASLESS-REDESIGN-CRYPTO-DESIGN.md` §D2.2. The table
+below mirrors it verbatim; any change to the schema is a change to that section FIRST.
+
+### Constants
+
+| Name | Type | Value |
+| --- | --- | --- |
+| `INTENT_NONCE_DOMAIN_TAG` | `bytes32` | `keccak256("VYNX_SETTLEMENT_V1_INTENT_NONCE")` = `0x03c20e8f9c0817f6c22eef3e9b182dd6554fa0d3040b1aec1e7b6fea3458c416` |
+
+### Functions
+
+| Signature | Mutability | Notes |
+| --- | --- | --- |
+| `computeNonce(bytes32 intentId, address agent, address token, uint256 inputAmount, address outputToken, uint256 minOutputAmount, uint256 destinationChainId, uint256 deadline) returns (bytes32)` | `internal pure` | `keccak256(abi.encode(INTENT_NONCE_DOMAIN_TAG, …8 terms))`. Individual parameters by design (decoupled from the Sprint 1.2 struct change). |
+
+### Canonical field → ABI-type table (§D2.2 mirror — THE cross-repo contract)
+
+| # | Field | ABI type | Solidity source (`lockIntent`) | SDK source (viem) | Encoded width |
+|---|---|---|---|---|---|
+| 0 | `INTENT_NONCE_DOMAIN_TAG` | `bytes32` | `constant` = `keccak256("VYNX_SETTLEMENT_V1_INTENT_NONCE")` | same constant, hardcoded hex | 32 bytes |
+| 1 | `intentId` | `bytes32` | `intent.intentId` | `intent.intentId` (`0x…` 32 bytes) | 32 bytes |
+| 2 | `agent` | `address` | `intent.agent` | agent account address | 32 bytes (left-padded) |
+| 3 | `USDC` | `address` | the contract's immutable `usdc` | `CONTRACTS[chainId].USDC` (`constants.ts:29`) | 32 bytes (left-padded) |
+| 4 | `inputAmount` | `uint256` | `intent.inputAmount` | `bigint` atomic units (6 decimals) | 32 bytes |
+| 5 | `outputToken` | `address` | `intent.outputToken` | destination token address | 32 bytes (left-padded) |
+| 6 | `minOutputAmount` | `uint256` | `intent.minOutputAmount` | `bigint` atomic units | 32 bytes |
+| 7 | `destinationChainId` | `uint256` | `intent.destinationChainId` | `bigint(chainId)` | 32 bytes |
+| 8 | `deadline` | `uint256` | `intent.deadline` | `bigint` unix seconds | 32 bytes |
+
+Total pre-image: exactly **288 bytes** (9 × 32). All nine types are static — no tail section,
+no offsets, no length prefixes. `abi.encode` (never `abi.encodePacked`): canonical injective
+head encoding, byte-identical across Solidity `abi.encode`, viem `encodeAbiParameters`, and
+go-ethereum `abi.Arguments.Pack`.
+
+### Cross-language test vector
+
+Canonical home: `test/fixtures/intent-nonce-vector.json` (Solidity mirror:
+`test/fixtures/IntentNonceVector.sol`; drift-guarded by `test/unit/IntentNonceLib.t.sol`).
+The expected nonce was derived independently with viem and is asserted from Solidity
+`abi.encode` — FASE 2 (vynx-sdk), FASE 3 (vynx-relayer), and FASE 5 (vynx-e2e) consume the
+JSON verbatim and assert the same hash; the schema is never reimplemented.
+
+### Invariants
+
+1. The nonce pre-image is exhaustive: changing the domain tag or any of the 8 terms changes
+   the nonce (asserted term-by-term plus fuzzed in `test/unit/IntentNonceLib.t.sol`).
+2. `INTENT_NONCE_DOMAIN_TAG` never mutates (cross-protocol separation, §D2.4).
+3. Cross-deployment binding comes from the EIP-3009 envelope (`to` inside Circle's signed
+   struct + USDC's domain separator), deliberately NOT from this hash (§D2.4).
 
 ---
 
@@ -280,14 +365,13 @@ ownership is replaced by explicit `watchdog` and `multisig` role addresses.
 ## VynxSettlement — `src/l2/VynxSettlement.sol`
 
 Immutable intent escrow and settlement contract on Base L2. Inherits `ReentrancyGuard` and
-`EIP712`.
+`EIP712`. Escrow funds enter **gaslessly**: the agent signs one EIP-3009
+`receiveWithAuthorization` off-chain and the winning solver executes `lockIntent`, paying all
+gas. The relayer signs **vouchers only** — it no longer signs intents.
 
 ### Constants
 
 ```solidity
-bytes32 public constant INTENT_TYPEHASH = keccak256(
-    "Intent(uint256 nonce,address user,address token,uint256 amount,uint256 destinationChainId,uint256 deadline)"
-);
 bytes32 public constant VOUCHER_TYPEHASH = keccak256(
     "Voucher(bytes32 intentId,address solver,uint256 amount)"
 );
@@ -295,13 +379,28 @@ uint64 public constant DEFAULT_DEADLINE = 900; // 15 minutes
 ```
 
 EIP-712 domain: `EIP712("VynxSettlement", "1")` — commits to name, version, `chainId`,
-`verifyingContract`.
+`verifyingContract`. Used for **vouchers only**: intent authorizations are signed against
+USDC's own EIP-712 domain (`"USD Coin"/"2"`) and verified by Circle's audited code (§D2.4).
+`INTENT_TYPEHASH` was retired with the relayer intent-signing path; the intent's cryptographic
+schema is now the §D2.2 nonce pre-image implemented by `IntentNonceLib`.
+
+### Constructor
+
+```solidity
+constructor(address _admin, address _treasury, uint16 _takeRateBps, address _usdc)
+```
+
+Reverts `ZeroAddress` if `_admin`, `_treasury`, or `_usdc` is zero; `InvalidTakeRate` if
+`_takeRateBps > 20`. `_usdc` is the canonical Circle USDC address
+(`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` on Base — `DeployL2.s.sol:USDC_BASE`), stored
+as the immutable `usdc`.
 
 ### State Variables
 
 | Name | Type | Notes |
 | --- | --- | --- |
 | `admin` | `address immutable` | VynxAdmin; source of truth for `relayerKey`; sole caller of `syncConfig`/`setPaused`. |
+| `usdc` | `address immutable` | Canonical USDC — the only supported input token and the EIP-3009 contract escrow funds are pulled through (on-chain token lock, §D3.5). |
 | `treasury` | `address` | Take-rate recipient; updated via `syncConfig`. |
 | `takeRateBps` | `uint16` | Take rate in `[0, 20]`; updated via `syncConfig`. |
 | `paused` | `bool` | When true, `lockIntent` and `claimFunds` revert. |
@@ -311,12 +410,39 @@ EIP-712 domain: `EIP712("VynxSettlement", "1")` — commits to name, version, `c
 
 | Signature | Access | Notes |
 | --- | --- | --- |
-| `lockIntent(Intent calldata intent, bytes calldata relayerSig)` | `external nonReentrant` | UNKNOWN → LOCKED. Verifies EIP-712 over the intent vs `relayerKey()`. Sets `deadline = now + 900`; pulls tokens from `intent.agent`. |
+| `lockIntent(Intent calldata intent, Authorization calldata auth)` | `external nonReentrant` | UNKNOWN → LOCKED. Called by the winning solver. Custody flow below. |
 | `claimFunds(Voucher calldata voucher)` | `external nonReentrant` | LOCKED → REDEEMED. Verifies voucher signature; pays `net` to solver, `fee` to treasury. |
 | `refundIntent(bytes32 intentId)` | `external nonReentrant` | Permissionless after deadline. LOCKED → REFUNDED. Returns full amount to agent. |
 | `syncConfig(uint16 newTakeRateBps, address newTreasury)` | `admin` only | Updates economic params. Emits `ConfigSynced`. |
 | `setPaused(bool _paused)` | `admin` only | Pause propagation. |
 | `_deductTakeRate(uint256 amount)` | `internal view` | `fee = amount * takeRateBps / 10_000` (`unchecked`); `net = amount - fee`. |
+
+### `lockIntent` custody flow (§D3.6 canonical CEI order)
+
+```text
+1. if (paused) revert ContractPaused();                                  CHECK
+2. if (intents[id].state != UNKNOWN) revert IntentAlreadyExists(id);     CHECK
+3. if (intent.token != usdc) revert TokenNotSupported(token);            CHECK  (token lock, §D3.5)
+4. if (intent.inputAmount == 0) revert ZeroAmount();                     CHECK  (§D8 #18)
+5. if (msg.sender != intent.solver) revert SolverMismatchOnLock(...);    CHECK  (§D5 Option A)
+6. expectedNonce = IntentNonceLib.computeNonce(8 intent terms);                 (never calldata)
+7. intents[id] = IntentEscrow({ solver: msg.sender, state: LOCKED,
+                                deadline: now + 900, ... });             EFFECTS
+8. IUSDCAuthorization(usdc).receiveWithAuthorization(
+       agent, address(this), inputAmount,
+       0 /*validAfter*/, intent.deadline /*validBefore*/,
+       expectedNonce, auth.v, auth.r, auth.s);                           INTERACTION
+9. emit IntentLocked(id, agent, msg.sender, token, inputAmount, deadline);
+```
+
+The escrow write (7) precedes the external USDC call (8) — checks-effects-interactions with
+`nonReentrant` as defense-in-depth. Atomicity holds: if Circle's contract reverts at (8)
+(invalid/expired signature, used or canceled nonce, insufficient balance, blacklist, pause),
+the escrow write unwinds with the whole transaction. The decisive property: the nonce is
+**always an output** of the intent terms, never an input — a tampered term yields a different
+recomputed nonce, the digest USDC reconstructs no longer matches the agent's signature, and the
+lock is impossible. The only custom cryptographic code is one `keccak256(abi.encode(...))`;
+all ECDSA verification is delegated to Circle's audited token.
 
 `claimFunds` fee handling: `fee = amount * takeRateBps / 10_000` (integer floor; the remainder
 accrues to the solver and is never lost). When `fee > 0`, the fee is transferred to the treasury
@@ -333,16 +459,22 @@ emits `SuspiciousRelayerActivity` and reverts `InvalidState`.
 | `InvalidState(bytes32 intentId, IntentState current)` | Operation against an intent in the wrong state. |
 | `DeadlineNotExpired(bytes32 intentId, uint64 deadline)` | Refund before `block.timestamp > deadline`. |
 | `InvalidVoucherSignature(bytes32 intentId)` | Voucher signer != `relayerKey()`. |
-| `InvalidIntentSignature(bytes32 intentId)` | Intent signer != `relayerKey()`. |
+| `TokenNotSupported(address token)` | Lock with `intent.token != usdc` (on-chain token lock, §D3.5). |
+| `SolverMismatchOnLock(address caller, address declaredSolver)` | Lock caller != `intent.solver` (§D5 Option A provenance). |
+| `ZeroAmount()` | Lock with `intent.inputAmount == 0` (§D8 #18). |
 | `SolverMismatch(bytes32 intentId, address expected, address got)` | `voucher.solver` != escrow solver. |
 | `ContractPaused` | `lockIntent`/`claimFunds` while paused. |
 | `Unauthorized` | `syncConfig`/`setPaused` caller != `admin`. |
-| `ZeroAddress` | Constructor/`syncConfig` zero treasury (implementation-level guard). |
+| `ZeroAddress` | Constructor zero `admin`/`treasury`/`usdc`, or `syncConfig` zero treasury (implementation-level guard). |
 | `InvalidTakeRate(uint16 bps)` | Constructor take rate > 20 (implementation-level guard). |
+
+`InvalidIntentSignature` was removed with the relayer intent-signing path (zero references —
+same dead-error hygiene as the BLINDAJE pass). Failures of the agent's EIP-3009 authorization
+revert **inside Circle's USDC** with FiatTokenV2 require-strings and bubble through `lockIntent`.
 
 ### Events
 
-- `IntentLocked(bytes32 indexed intentId, address indexed agent, address indexed solver, address token, uint256 amount, uint64 deadline)`
+- `IntentLocked(bytes32 indexed intentId, address indexed agent, address indexed solver, address token, uint256 amount, uint64 deadline)` — shape unchanged from V1.1; `amount = inputAmount`, `solver = msg.sender (== intent.solver)`.
 - `VoucherRedeemed(bytes32 indexed intentId, address indexed solver, uint256 netAmount, uint256 fee)`
 - `IntentRefunded(bytes32 indexed intentId, address indexed agent, uint256 amount)`
 - `SuspiciousRelayerActivity(bytes32 indexed intentId, address indexed attacker, bytes32 spoofedIntentId)`
@@ -353,6 +485,13 @@ emits `SuspiciousRelayerActivity` and reverts `InvalidState`.
 - State transitions are unidirectional; REDEEMED/REFUNDED are terminal.
 - `net + fee == amount` for every redeemed intent.
 - The escrow USDC balance is always at least the sum of all LOCKED amounts (solvency).
+- A LOCKED escrow exists only if the matching EIP-3009 nonce is marked used inside USDC
+  (`authorizationState(agent, computeNonce(terms)) == true`) — locks and authorization
+  consumption are atomic (§D8 #1/#6/#8).
+- `escrow.solver == msg.sender` of the lock transaction, always (§D5 Option A) — mis-locks are
+  self-identifying; framing an innocent solver is impossible.
+- An authorization is spendable only through the deployment whose address the agent signed as
+  the 3009 `to` (Circle enforces `msg.sender == to`; §D2.4, §D8 #19).
 
 ---
 

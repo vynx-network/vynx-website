@@ -70,11 +70,11 @@ signature  bytes      ← embedded; never a separate argument
 
 | Function | Mutability | Notes |
 |---|---|---|
-| `lockIntent(tuple intent, bytes signature)` | nonpayable | Agent locks input USDC; emits `IntentLocked`. EIP-712 `INTENT_TYPEHASH`. |
-| `claimFunds(tuple voucher)` | nonpayable | Solver redeems the relayer-signed voucher (Invariant 2 `VOUCHER_TYPEHASH`; replay-protected, BLINDAJE A.19). Emits `VoucherRedeemed`. |
+| `lockIntent(tuple intent, tuple auth)` | nonpayable | **GASLESS REDESIGN** — the **winning solver** locks the agent's input USDC, paying the gas. `intent` is the 9-field struct (8 agent-signed terms + `solver`; caller must equal `intent.solver` — `SolverMismatchOnLock`); `auth` is the agent's EIP-3009 signature as `(uint8 v, bytes32 r, bytes32 s)` (the 65-byte `r‖s‖v` from `AuctionWonFrame.authorization`, split). The contract recomputes the terms-nonce and calls `USDC.receiveWithAuthorization` — Circle verifies the agent's signature. Emits `IntentLocked`. |
+| `claimFunds(tuple voucher)` | nonpayable | Solver redeems the relayer-signed voucher (Invariant 2 `VOUCHER_TYPEHASH`; replay-protected, BLINDAJE A.19). `voucher` is the 6-field struct `(intentId, solver, amount, destTxHash, issuedAt, signature)` — only the first three are EIP-712-signed; the signature must recover to `IVynxAdmin(admin).relayerKey()` (read cross-contract on every call) and its last byte must be Ethereum-form `v ∈ {27,28}` (the witness emits raw `{0,1}` — consumers normalize, see [`solver.md`](solver.md) §6.2). Pays `escrow.amount − fee` to `voucher.solver` and the `fee = amount·takeRateBps/10_000` to the treasury (which also gets `receiveTakeRate` called). Emits `VoucherRedeemed`. |
 | `refundIntent(bytes32 intentId)` | nonpayable | **Permissionless**, deadline + state gated (BLINDAJE A.17). The Watchdog's W4 calls it. |
 | `takeRateBps()` / `setPaused(bool)` / `syncConfig(uint16, address)` | view/nonpayable | Take-rate math, BLINDAJE A.18. |
-| `INTENT_TYPEHASH`, `VOUCHER_TYPEHASH`, `eip712Domain`, `intents(bytes32)`, `DEFAULT_DEADLINE`, `paused`, `treasury` | view | |
+| `VOUCHER_TYPEHASH`, `eip712Domain`, `intents(bytes32)`, `usdc()`, `DEFAULT_DEADLINE`, `paused`, `treasury` | view | No `INTENT_TYPEHASH` anymore — intent authenticity is EIP-3009 (the agent signs USDC's domain, not the settlement's). |
 
 **Events**
 
@@ -82,12 +82,13 @@ signature  bytes      ← embedded; never a separate argument
 |---|---|
 | `IntentLocked` | `intentId, agent, token, solver?, amount, deadline(uint64)` |
 | `IntentRefunded` | `intentId, agent, amount` — the Keeper reads these as its blind agent source. |
-| `VoucherRedeemed` | `intentId, solver, amount, takeRate` |
+| `VoucherRedeemed` | `intentId (indexed), solver (indexed), netAmount, fee` — watched by the relayer's G13 `VoucherRedeemedWatcher` (archives the intent, closing voucher delivery). |
 | `SuspiciousRelayerActivity` | `intentId, relayer, reason` — drives the Watchdog fraud path. |
 | `ConfigSynced`, `EIP712DomainChanged` | — |
 
-Key errors: `DeadlineNotExpired`, `InvalidIntentSignature`, `InvalidVoucherSignature`,
-`InvalidState`, `SolverMismatch`, `TokenNotWhitelisted`, `ContractPaused`.
+Key errors: `DeadlineNotExpired`, `InvalidVoucherSignature`, `InvalidState`,
+`SolverMismatch`, `SolverMismatchOnLock`, `IntentAlreadyExists`,
+`TokenNotSupported`, `ContractPaused`.
 
 ---
 
