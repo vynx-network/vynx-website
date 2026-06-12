@@ -269,10 +269,12 @@ export default function ThesisPage() {
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
               <p>
                 VynX is not faster DeFi. It is different DeFi — designed from
-                the constraint up. Four immutable constants govern every
-                settlement. No governance can modify them after deployment. No
-                Solver can negotiate around them. The architecture is the
-                guarantee.
+                the constraint up. Four constants govern every settlement: the
+                200ms auction window, the 10-second lock SLA, the 15-minute
+                deadline, and the 1.20× SHF threshold. The 200ms window and
+                10-second SLA are fixed Relayer operating parameters; the
+                deadline and SHF threshold are protocol-level. No Solver
+                negotiates around them. The architecture is the guarantee.
               </p>
             </div>
 
@@ -349,9 +351,10 @@ export default function ThesisPage() {
                 settles identically.
               </p>
               <p>
-                The 200ms window is not a soft guideline. It is encoded in
-                contract state. A Solver who submits outside the window is
-                ineligible for the reward. The physics are immutable.
+                The 200ms window is not a soft guideline. It is enforced by the
+                Relayer&rsquo;s hot-path auction engine. A bid submitted after the
+                window closes is dropped and cannot win. The clearing event is
+                deterministic.
               </p>
             </div>
           </section>
@@ -434,17 +437,23 @@ export default function ThesisPage() {
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
               <p>
                 VynX operates a two-tier penalty system. Jail Time penalizes SLA
-                breaches — a Solver who wins the auction but fails to execute{" "}
+                breaches: the 10-second lock clock arms only when the winning
+                Solver acknowledges the auction-won frame, and a Solver that
+                acknowledges then fails to execute{" "}
                 <span className="font-mono text-[13px] text-vynx-text">
                   lockIntent()
                 </span>{" "}
-                within 10 seconds is suspended for an escalating jail duration
-                (N1: 60s, N2: 10min, N3: 1h, N4: 24h, N5: permanent).
+                within that window draws an escalating jail duration (N1: 60s,
+                N2: 10min, N3: 1h, N4: 24h, N5: permanent). A Solver that never
+                acknowledges forfeits the win to the next-best bid — it is not
+                jailed. Frame-delivery latency is a Relayer-side fault, never a
+                Solver penalty.
               </p>
               <p>
-                SlashAmount penalizes Deadline breaches — a Solver who fails to
+                SlashAmount penalizes Deadline breaches. A Solver that fails to
                 complete settlement within the agent&rsquo;s 15-minute deadline
-                loses a deterministic fraction of their collateral.
+                loses a deterministic fraction of its collateral and is jailed at
+                level 3 or higher — a missed deadline carries both penalties.
               </p>
             </div>
 
@@ -541,10 +550,10 @@ export default function ThesisPage() {
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
               <p>
-                The 10 bps take rate is not a pricing decision. It is a protocol
-                constant. The bytecode cap of 20 bps cannot be exceeded by
-                governance or upgrade — it is immutable. An agent that optimizes
-                for latency over marginal cost does not comparison shop at the
+                The 10 bps take rate is not a pricing decision. It sits beneath a
+                20 bps bytecode ceiling that cannot be exceeded by governance or
+                upgrade — the cap is immutable. An agent that optimizes for
+                latency over marginal cost does not comparison shop at the
                 settlement layer. The demand is inelastic by architecture.
               </p>
             </div>
