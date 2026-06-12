@@ -374,8 +374,8 @@ export default function ThesisPage() {
                 Circle&rsquo;s USDC rejects the lock. The call locks the
                 agent&rsquo;s capital on Base before any destination-chain
                 payment is made. The Origin Lock is the trust-minimized, atomic
-                guarantee that eliminates the two primary attack vectors
-                against cross-chain settlement.
+                guarantee that eliminates the two primary attack vectors against
+                cross-chain settlement.
               </p>
             </div>
 
@@ -567,7 +567,8 @@ export default function ThesisPage() {
             </div>
 
             <p className="font-mono text-[11px] text-vynx-faint mt-8 leading-relaxed">
-              1B VYNX hard-capped supply. No future mint. Giant philosophy.
+              1B VYNX hard-capped supply. No future mint. Small Giant
+              philosophy.
             </p>
           </section>
         </ThesisSection>
@@ -582,8 +583,8 @@ export default function ThesisPage() {
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
               <p>
                 The acquisition channel is not a sales team. It is a package
-                manager. Any developer integrating the AgentKit plugin
-                automatically puts their agents onto the VynX settlement rail.
+                manager. At launch: any developer integrating the AgentKit plugin
+                puts their agents onto the VynX settlement rail.
                 The developer installs. Agents route automatically. No wallet
                 popups. No brand preferences. No onboarding fatigue.
               </p>
@@ -591,7 +592,7 @@ export default function ThesisPage() {
 
             <Card className="mb-6">
               <div className="font-mono text-[10px] tracking-[0.15em] text-vynx-faint mb-3">
-                DISTRIBUTION VECTOR
+                DISTRIBUTION VECTOR · AT LAUNCH
               </div>
               <div className="font-mono text-[15px]">
                 <span className="text-vynx-muted">npm install </span>
@@ -616,9 +617,9 @@ export default function ThesisPage() {
 
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
               <p>
-                An agent operates indefinitely on 50 USDC and a single
-                off-chain signature per swap — zero transactions, zero gas. The
-                Solver bears all gas; recovery after a missed deadline is
+                An agent operates indefinitely on 50 USDC and a single off-chain
+                signature per swap — zero transactions, zero gas. The Solver
+                bears all gas; recovery after a missed deadline is
                 permissionless. The capital requirement for agentic
                 participation collapses to the size of a single intent. The
                 network grows every time an agent framework ships a new plugin.

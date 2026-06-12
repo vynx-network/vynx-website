@@ -111,10 +111,7 @@ const cards: MetricCardProps[] = [
     label: "OFA WINDOW",
     value: "200",
     unit: "ms",
-    description: "Sealed-bid auction. 75–450× faster than CoW median.",
-    badge: "LIVE",
-    badgeColor: "green",
-    footnote: "↗ p99",
+    description: "Sealed-bid auction, single-block clearing. No batch window. No Dutch decay.",
   },
   {
     label: "TAKE RATE",
