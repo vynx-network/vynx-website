@@ -41,8 +41,7 @@ function ChecklistItem({ title, subtitle, address, link }: ChecklistItemProps) {
 const items: ChecklistItemProps[] = [
   {
     title: "PROTOCOL CONTRACTS",
-    subtitle:
-      "6 contracts across Ethereum L1 + Base L2 · BLINDAJE-hardened · request audit access",
+    subtitle: "6 contracts across Ethereum L1 + Base L2 · BLINDAJE-hardened",
   },
   {
     title: "GO RELAYER ENGINE",
@@ -50,11 +49,11 @@ const items: ChecklistItemProps[] = [
   },
   {
     title: "TYPESCRIPT SDK",
-    subtitle: "functional · publish-ready · request access under NDA",
+    subtitle: "functional · publish-ready",
   },
   {
     title: "END-TO-END DEMO",
-    subtitle: "make reviewer-demo — full loop, end to end · available under NDA",
+    subtitle: "make reviewer-demo — full loop, end to end",
   },
 ];
 
@@ -66,6 +65,9 @@ export default function OnChainVerifiability() {
         <h2 className="font-display text-section-headline leading-none text-white mb-0 text-balance">
           NOT A DECK. A PROTOCOL
         </h2>
+        <p className="font-body font-light text-[15px] text-vynx-muted mt-4 leading-relaxed">
+          Every component available for audit under NDA.
+        </p>
         <div className="mt-12">
           {items.map((item) => (
             <ChecklistItem key={item.title} {...item} />
