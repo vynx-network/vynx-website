@@ -8,10 +8,15 @@ const navLinks = [
   { label: "THESIS", href: "/thesis" },
   { label: "SOLVERS", href: "/solvers" },
   { label: "AGENTS", href: "/agents" },
-  { label: "GITHUB", href: "#", external: true },
+  {
+    label: "REQUEST ACCESS",
+    href: "mailto:cristian@vynx.network",
+    external: true,
+  },
 ];
 
-const baseLinkClass = "font-mono text-[11px] tracking-widest transition-colors duration-200";
+const baseLinkClass =
+  "font-mono text-[11px] tracking-widest transition-colors duration-200";
 const activeLinkClass = `${baseLinkClass} text-white`;
 const inactiveLinkClass = `${baseLinkClass} text-vynx-muted hover:text-white`;
 
@@ -45,11 +50,13 @@ export default function Navbar() {
               <Link
                 key={link.label}
                 href={link.href}
-                className={pathname === link.href ? activeLinkClass : inactiveLinkClass}
+                className={
+                  pathname === link.href ? activeLinkClass : inactiveLinkClass
+                }
               >
                 {link.label}
               </Link>
-            )
+            ),
           )}
         </div>
 
@@ -94,12 +101,14 @@ export default function Navbar() {
               <Link
                 key={link.label}
                 href={link.href}
-                className={pathname === link.href ? activeLinkClass : inactiveLinkClass}
+                className={
+                  pathname === link.href ? activeLinkClass : inactiveLinkClass
+                }
                 onClick={() => setOpen(false)}
               >
                 {link.label}
               </Link>
-            )
+            ),
           )}
         </div>
       )}
