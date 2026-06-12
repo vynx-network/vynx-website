@@ -28,7 +28,7 @@ export default function Hero() {
           {/* CTAs */}
           <div className="mt-10 flex flex-row max-[400px]:flex-col gap-4">
             <Button variant="primary" href="mailto:cristian@vynx.network">
-              REQUEST THESIS
+              REQUEST ACCESS
             </Button>
             <Button variant="secondary" href="/thesis">
               NETWORK THESIS

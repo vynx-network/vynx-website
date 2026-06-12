@@ -111,15 +111,14 @@ const cards: MetricCardProps[] = [
     label: "OFA WINDOW",
     value: "200",
     unit: "ms",
-    description: "Sealed-bid auction, single-block clearing. No batch window. No Dutch decay.",
+    description:
+      "Sealed-bid auction, single-block clearing. No batch window. No Dutch decay.",
   },
   {
     label: "TAKE RATE",
     value: "10",
     unit: "bps",
     description: "Immutable 20 bps hard cap in bytecode.",
-    badge: "BOUND",
-    badgeColor: "gold",
   },
   {
     label: "DEADLINE SHIELD",

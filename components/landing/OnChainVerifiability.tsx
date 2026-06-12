@@ -49,7 +49,7 @@ const items: ChecklistItemProps[] = [
   },
   {
     title: "TYPESCRIPT SDK",
-    subtitle: "functional · publish-ready",
+    subtitle: "functional SDK for Agentkit and ElizaOS · publish-ready",
   },
   {
     title: "END-TO-END DEMO",
