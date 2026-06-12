@@ -21,7 +21,7 @@ const spamStats = [
   { value: "2", label: "ENTITIES CONCENTRATING SPAM (80%+)" },
 ];
 
-const archColClass = "grid grid-cols-[120px_80px_1fr_100px]";
+const archColClass = "grid grid-cols-[180px_80px_1fr_100px]";
 
 const archConstants = [
   {
