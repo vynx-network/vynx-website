@@ -40,11 +40,20 @@ function ChecklistItem({ title, subtitle, address, link }: ChecklistItemProps) {
 
 const items: ChecklistItemProps[] = [
   {
-    title: "Go Relayer Engine",
+    title: "PROTOCOL CONTRACTS",
+    subtitle:
+      "6 contracts across Ethereum L1 + Base L2 · BLINDAJE-hardened · request audit access",
+  },
+  {
+    title: "GO RELAYER ENGINE",
     subtitle: "runs the 200ms sealed-bid OFA in the reviewer-demo",
   },
   {
-    title: "End-to-end demo",
+    title: "TYPESCRIPT SDK",
+    subtitle: "functional · publish-ready · request access under NDA",
+  },
+  {
+    title: "END-TO-END DEMO",
     subtitle: "make reviewer-demo — full loop, end to end · available under NDA",
   },
 ];
