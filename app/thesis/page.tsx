@@ -567,8 +567,7 @@ export default function ThesisPage() {
             </div>
 
             <p className="font-mono text-[11px] text-vynx-faint mt-8 leading-relaxed">
-              1B VYNX hard-capped supply. No future mint. No Series A. Small
-              Giant philosophy — Seed → Exit without dilution.
+              1B VYNX hard-capped supply. No future mint. Giant philosophy.
             </p>
           </section>
         </ThesisSection>
