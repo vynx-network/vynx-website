@@ -99,8 +99,9 @@ Rationale: CTA must be a noun phrase or imperative, not an invitation to browse.
 
 ## Copy Principles for VynX Specifically
 
-The protocol is live, not a vision. Every present-tense claim is verifiable on-chain.
-Use present tense for facts. Use future tense only for explicitly roadmapped items.
+The protocol is built and BLINDAJE-hardened, demonstrable on Base Sepolia testnet — NOT on
+mainnet, SDK NOT yet published. Use present tense ONLY for facts true now; use future /
+launch-gated tense for unpublished or mainnet-gated items.
 
 The audience has seen a thousand whitepapers. They are allergic to promise.
 What they respond to: mechanism, number, constraint, consequence.

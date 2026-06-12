@@ -517,18 +517,16 @@ export default function SolversPage() {
         <div className="flex items-center gap-3 mb-6">
           <span className="font-mono text-[13px] text-white">@vynx/sdk</span>
           <a
-            href="https://www.npmjs.com/package/@vynx/sdk"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="mailto:cristian@vynx.network"
             className="font-mono text-[12px] text-vynx-gold hover:text-white transition-colors duration-200"
           >
-            ↗ npm
+            REQUEST SDK ACCESS
           </a>
         </div>
 
         <CodeBlock
           language="bash"
-          label="INSTALL"
+          label="INSTALL · AT LAUNCH"
           code="npm install @vynx/sdk"
         />
 

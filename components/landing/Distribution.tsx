@@ -13,7 +13,7 @@ function NpmBlock() {
   return (
     <Card>
       <div className="font-mono text-[10px] tracking-[0.15em] text-vynx-faint mb-3">
-        DISTRIBUTION VECTOR
+        DISTRIBUTION VECTOR · AT LAUNCH
       </div>
       <div className="font-mono text-[15px]">
         <span className="text-vynx-muted">npm install </span>
@@ -55,7 +55,7 @@ export default function Distribution() {
         <NpmBlock />
 
         <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-140 -mt-4">
-          The developer installs. Agents route automatically. No wallet popups.
+          At launch: the developer installs. Agents route automatically. No wallet popups.
           No brand preferences. No onboarding fatigue. An agent operates
           indefinitely on 50 USDC and one off-chain signature per swap — zero
           transactions, gas borne by the Solver, recovery permissionless.

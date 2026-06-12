@@ -299,11 +299,11 @@ export default function AgentsPage() {
           </span>
           <div>
             <div className="font-mono text-[11px] tracking-wide text-vynx-muted uppercase mb-3">
-              INSTALL
+              INSTALL · AT LAUNCH
             </div>
             <CodeBlock
               language="bash"
-              label="INSTALL"
+              label="INSTALL · AT LAUNCH"
               code="npm install @vynx/sdk viem"
             />
           </div>
@@ -380,12 +380,10 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
         <div className="flex items-center gap-3 mb-6">
           <span className="font-mono text-[13px] text-white">@vynx/sdk</span>
           <a
-            href="https://www.npmjs.com/package/@vynx/sdk"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="mailto:cristian@vynx.network"
             className="font-mono text-[12px] text-vynx-gold hover:text-white transition-colors duration-200"
           >
-            ↗ npm
+            REQUEST SDK ACCESS
           </a>
         </div>
 
@@ -716,10 +714,9 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
         <div className="flex gap-4 flex-wrap">
           <Button
             variant="primary"
-            href="https://www.npmjs.com/package/@vynx/sdk"
-            target="_blank"
+            href="mailto:cristian@vynx.network"
           >
-            INSTALL SDK ↗
+            REQUEST SDK ACCESS
           </Button>
           <Button variant="secondary" href="mailto:cristian@vynx.network">
             CONTACT
