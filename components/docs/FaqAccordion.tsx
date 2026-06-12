@@ -25,7 +25,7 @@ export default function FaqAccordion({ items }: FaqAccordionProps) {
             className="flex justify-between items-center py-4 w-full text-left cursor-pointer"
             onClick={() => setOpenIndex(openIndex === i ? null : i)}
           >
-            <span className="font-body font-medium text-[15px] text-white">
+            <span className="font-body font-medium text-[15px] text-vynx-text">
               {item.q}
             </span>
             <span className="font-mono text-[16px] text-vynx-gold ml-4 shrink-0">

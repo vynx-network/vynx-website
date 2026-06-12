@@ -17,7 +17,7 @@ function NpmBlock() {
       </div>
       <div className="font-mono text-[15px]">
         <span className="text-vynx-muted">npm install </span>
-        <span className="text-white">@vynx-network/sdk</span>
+        <span className="text-vynx-text">@vynx-network/sdk</span>
       </div>
     </Card>
   );
@@ -48,7 +48,7 @@ export default function Distribution() {
       <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20 flex flex-col gap-12">
         <SectionLabel>DISTRIBUTION WITHOUT HUMANS</SectionLabel>
 
-        <h2 className="font-display text-section-headline leading-none text-white -mt-2 text-balance">
+        <h2 className="font-display text-section-headline leading-none text-vynx-text -mt-2 text-balance">
           THE SDK IS THE TROJAN HORSE
         </h2>
 
@@ -64,7 +64,7 @@ export default function Distribution() {
         <ChainBadges />
 
         <div className="max-w-140">
-          <p className="font-body font-medium text-[15px] text-white leading-relaxed">
+          <p className="font-body font-medium text-[15px] text-vynx-text leading-relaxed">
             There is no second-mover on settlement infrastructure. The M2M
             standard is being defined now.
           </p>

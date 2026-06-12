@@ -170,7 +170,7 @@ export default function ThesisPage() {
         >
           {/* §1.1 */}
           <section id="s1-1" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               THE AXIOM
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
@@ -194,7 +194,7 @@ export default function ThesisPage() {
                 { value: "$80.25M", label: "VIRTUALS TVL" },
               ].map((s) => (
                 <Card key={s.label} className="p-4">
-                  <div className="font-display text-[28px] text-white leading-none">
+                  <div className="font-display text-[28px] text-vynx-text leading-none">
                     {s.value}
                   </div>
                   <div className="font-mono text-[10px] tracking-wide text-vynx-muted mt-1">
@@ -207,7 +207,7 @@ export default function ThesisPage() {
 
           {/* §1.2 */}
           <section id="s1-2" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               THE COLLAPSE
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
@@ -231,14 +231,14 @@ export default function ThesisPage() {
 
           {/* §1.3 */}
           <section id="s1-3" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               THE CANCER
             </h3>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 my-8">
               {spamStats.map((s) => (
                 <Card key={s.label} className="p-4">
-                  <div className="font-display text-[32px] text-white leading-none">
+                  <div className="font-display text-[32px] text-vynx-text leading-none">
                     {s.value}
                   </div>
                   <div className="font-mono text-[10px] tracking-wide text-vynx-muted mt-1">
@@ -263,7 +263,7 @@ export default function ThesisPage() {
         <ThesisSection id="page-02" title="PHYSICAL DETERMINISM">
           {/* §2.1 */}
           <section id="s2-1" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               ASYMMETRIC ARCHITECTURE
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
@@ -300,13 +300,13 @@ export default function ThesisPage() {
                   >
                     <div
                       role="cell"
-                      className="font-mono text-[12px] text-white"
+                      className="font-mono text-[12px] text-vynx-text"
                     >
                       {row.constant}
                     </div>
                     <div
                       role="cell"
-                      className="font-display text-[18px] text-white leading-none"
+                      className="font-display text-[18px] text-vynx-text leading-none"
                     >
                       {row.value}
                     </div>
@@ -330,7 +330,7 @@ export default function ThesisPage() {
 
           {/* §2.2 */}
           <section id="s2-2" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               THE AUCTION
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
@@ -358,13 +358,13 @@ export default function ThesisPage() {
 
           {/* §2.3 */}
           <section id="s2-3" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               THE ORIGIN LOCK
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
               <p>
                 The winning Solver executes{" "}
-                <span className="font-mono text-[13px] text-white">
+                <span className="font-mono text-[13px] text-vynx-text">
                   lockIntent()
                 </span>{" "}
                 on VynxSettlement.sol from its own address, presenting the
@@ -398,7 +398,7 @@ export default function ThesisPage() {
                 <p className="font-body text-[13px] text-vynx-muted leading-relaxed">
                   InputToken = USDC. Collateral = USDC. The Asymmetric Asset
                   Policy reduces SHF to a{" "}
-                  <span className="font-mono text-[12px] text-white">
+                  <span className="font-mono text-[12px] text-vynx-text">
                     big.Int
                   </span>{" "}
                   integer comparison in microseconds. No price feed. No
@@ -413,13 +413,13 @@ export default function ThesisPage() {
               </div>
               <div className="space-y-3 font-body text-[13px] text-vynx-muted leading-relaxed">
                 <p>
-                  The <span className="text-white">claimFunds()</span> function
+                  The <span className="text-vynx-text">claimFunds()</span> function
                   cross-references the intentId against the locked state before
                   releasing any capital. Both the Solver&rsquo;s reward and the
                   agent&rsquo;s output are contingent on a deterministic
                   on-chain state transition.
                 </p>
-                <p className="text-white font-medium">
+                <p className="text-vynx-text font-medium">
                   Money does not move until the math is irrefutable.
                 </p>
               </div>
@@ -428,14 +428,14 @@ export default function ThesisPage() {
 
           {/* §2.4 */}
           <section id="s2-4" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               ASYMMETRIC SLASHING
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
               <p>
                 VynX operates a two-tier penalty system. Jail Time penalizes SLA
                 breaches — a Solver who wins the auction but fails to execute{" "}
-                <span className="font-mono text-[13px] text-white">
+                <span className="font-mono text-[13px] text-vynx-text">
                   lockIntent()
                 </span>{" "}
                 within 10 seconds is suspended for an escalating jail duration
@@ -449,7 +449,7 @@ export default function ThesisPage() {
             </div>
 
             <Card className="text-center py-8 my-6">
-              <div className="font-mono text-[16px] text-white">
+              <div className="font-mono text-[16px] text-vynx-text">
                 SlashAmount = InputAmount × 10%
               </div>
               <div className="font-mono text-[10px] text-vynx-faint mt-3">
@@ -473,7 +473,7 @@ export default function ThesisPage() {
         <ThesisSection id="page-03" title="THE INSTITUTIONAL LIQUIDITY TRAP">
           {/* §3.1 */}
           <section id="s3-1" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               THE OLIGOPOLY
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
@@ -490,7 +490,7 @@ export default function ThesisPage() {
             <div className="grid grid-cols-1 md:grid-cols-3">
               {oligStats.map((stat, i) => (
                 <div key={stat.label} className={oligColClasses[i]}>
-                  <div className="font-display text-[48px] leading-none text-white">
+                  <div className="font-display text-[48px] leading-none text-vynx-text">
                     {stat.value}
                   </div>
                   <div className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-muted mt-2">
@@ -509,7 +509,7 @@ export default function ThesisPage() {
 
           {/* §3.2 */}
           <section id="s3-2" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               THE MOAT · SHF
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
@@ -536,7 +536,7 @@ export default function ThesisPage() {
 
           {/* §3.3 */}
           <section id="s3-3" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               INELASTIC TAKE RATE
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
@@ -552,7 +552,7 @@ export default function ThesisPage() {
             <div className="grid grid-cols-1 md:grid-cols-3">
               {revenueStats.map((stat, i) => (
                 <div key={stat.label} className={revenueColClasses[i]}>
-                  <div className="font-display text-[48px] leading-none text-white">
+                  <div className="font-display text-[48px] leading-none text-vynx-text">
                     {stat.value}
                   </div>
                   <div className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-muted mt-2">
@@ -576,7 +576,7 @@ export default function ThesisPage() {
         <ThesisSection id="page-04" title="THE TROJAN HORSE ON BASE">
           {/* §4.1 */}
           <section id="s4-1" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               DISTRIBUTION WITHOUT HUMANS
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
@@ -595,7 +595,7 @@ export default function ThesisPage() {
               </div>
               <div className="font-mono text-[15px]">
                 <span className="text-vynx-muted">npm install </span>
-                <span className="text-white">@vynx-network/sdk</span>
+                <span className="text-vynx-text">@vynx-network/sdk</span>
               </div>
             </Card>
 
@@ -628,11 +628,11 @@ export default function ThesisPage() {
 
           {/* §4.2 */}
           <section id="s4-2" className="mb-12">
-            <h3 className="font-display text-[24px] text-white mb-4">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
               THE ULTIMATUM
             </h3>
 
-            <h4 className="font-display text-subsection-headline text-white mb-6">
+            <h4 className="font-display text-subsection-headline text-vynx-text mb-6">
               THE M2M STANDARD IS BEING DEFINED NOW.
             </h4>
 
@@ -650,7 +650,7 @@ export default function ThesisPage() {
             <div className="grid grid-cols-2 gap-3 my-8">
               {ultimatumStats.map((s) => (
                 <Card key={s.label} className="p-4">
-                  <div className="font-display text-[32px] text-white leading-none">
+                  <div className="font-display text-[32px] text-vynx-text leading-none">
                     {s.value}
                   </div>
                   <div className="font-mono text-[10px] tracking-wide text-vynx-muted mt-1 mb-2">
@@ -664,7 +664,7 @@ export default function ThesisPage() {
             </div>
 
             <Card goldBorder className="text-center py-10 mt-12">
-              <p className="font-body font-medium text-[17px] text-white leading-relaxed max-w-120 mx-auto">
+              <p className="font-body font-medium text-[17px] text-vynx-text leading-relaxed max-w-120 mx-auto">
                 Whoever controls agentic settlement on Base in 2026 will control
                 the AI value highway for the next decade.
               </p>

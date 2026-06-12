@@ -14,7 +14,7 @@ export default function Hero() {
           </div>
 
           {/* Headline */}
-          <h1 className="font-display text-hero-headline leading-none text-white mt-4 text-balance">
+          <h1 className="font-display text-hero-headline leading-none text-vynx-text mt-4 text-balance">
             DETERMINISTIC SETTLEMENT FOR THE M2M ECONOMY
           </h1>
 

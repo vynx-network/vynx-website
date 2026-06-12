@@ -12,7 +12,7 @@ function ChecklistItem({ title, subtitle, address, link }: ChecklistItemProps) {
     <div className="grid grid-cols-[20px_minmax(0,1fr)] gap-4 items-start py-5 border-b border-[var(--color-border)]">
       <span className="font-mono text-[14px] text-vynx-gold">✓</span>
       <div>
-        <div className="font-mono text-[12px] tracking-wide text-white uppercase">
+        <div className="font-mono text-[12px] tracking-wide text-vynx-text uppercase">
           {title}
         </div>
         <div className="font-body text-[13px] text-vynx-muted mt-1">
@@ -28,7 +28,7 @@ function ChecklistItem({ title, subtitle, address, link }: ChecklistItemProps) {
             href={link.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[12px] text-vynx-gold hover:text-white transition-colors duration-200 mt-1 inline-block"
+            className="font-mono text-[12px] text-vynx-gold hover:text-vynx-text transition-colors duration-200 mt-1 inline-block"
           >
             {link.label}
           </a>
@@ -62,7 +62,7 @@ export default function OnChainVerifiability() {
     <section className="py-24">
       <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20">
         <SectionLabel>BUILT · HARDENED · DEMONSTRABLE</SectionLabel>
-        <h2 className="font-display text-section-headline leading-none text-white mb-0 text-balance">
+        <h2 className="font-display text-section-headline leading-none text-vynx-text mb-0 text-balance">
           NOT A DECK. A PROTOCOL
         </h2>
         <p className="font-body font-light text-[15px] text-vynx-muted mt-4 leading-relaxed">

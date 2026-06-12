@@ -19,7 +19,7 @@ function OligopolyStats() {
     <div className="grid grid-cols-1 md:grid-cols-3">
       {oligStats.map((stat, i) => (
         <div key={stat.label} className={oligClasses[i]}>
-          <div className="font-display text-[48px] leading-none text-white">
+          <div className="font-display text-[48px] leading-none text-vynx-text">
             {stat.value}
           </div>
           <div className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-muted mt-2">
@@ -104,12 +104,12 @@ function RequirementsGrid() {
             role="row"
             className={`${reqColClass} border-b border-[var(--color-border)] py-4 items-center`}
           >
-            <div role="cell" className="font-mono text-[12px] text-white">
+            <div role="cell" className="font-mono text-[12px] text-vynx-text">
               {req.param}
             </div>
             <div
               role="cell"
-              className="font-display text-[18px] text-white leading-none"
+              className="font-display text-[18px] text-vynx-text leading-none"
             >
               {req.value}
             </div>
@@ -129,7 +129,7 @@ export default function SolverProgram() {
       <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20 flex flex-col gap-12">
         <SectionLabel>SOLVER PROGRAM · FOUNDING COHORT</SectionLabel>
 
-        <h2 className="font-display text-section-headline leading-none text-white -mt-2 text-balance">
+        <h2 className="font-display text-section-headline leading-none text-vynx-text -mt-2 text-balance">
           THE OLIGOPOLY IS THE MOAT
         </h2>
 

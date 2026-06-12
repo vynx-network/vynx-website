@@ -24,9 +24,9 @@ function MetricCard({
 }: MetricCardProps) {
   const dotColor =
     badgeColor === "green"
-      ? "#4ADE80"
+      ? "var(--color-live)"
       : badgeColor === "gold"
-        ? "#C9A84C"
+        ? "var(--color-gold)"
         : null;
 
   if (compact) {
@@ -44,7 +44,7 @@ function MetricCard({
           </span>
         </div>
         <div className="mt-3 flex items-baseline gap-1">
-          <span className="font-display text-[40px] leading-none text-white">
+          <span className="font-display text-[40px] leading-none text-vynx-text">
             {value}
           </span>
           <span className="font-display text-[14px] leading-none text-vynx-muted">
@@ -83,7 +83,7 @@ function MetricCard({
 
       {/* Metric */}
       <div className="mt-4 flex items-baseline gap-2 flex-1">
-        <span className="font-display text-[64px] leading-none text-white">
+        <span className="font-display text-[64px] leading-none text-vynx-text">
           {value}
         </span>
         <span className="font-display text-[20px] leading-none text-vynx-muted">

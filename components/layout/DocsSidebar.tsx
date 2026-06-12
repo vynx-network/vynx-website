@@ -18,9 +18,9 @@ interface DocsSidebarProps {
 }
 
 const activeClass =
-  "text-white border-l-2 border-vynx-gold pl-3 py-1 block font-body text-[14px] transition-colors duration-150";
+  "text-vynx-text border-l-2 border-vynx-gold pl-3 py-1 block font-body text-[14px] transition-colors duration-150";
 const inactiveClass =
-  "text-vynx-muted hover:text-white border-l-2 border-transparent pl-3 py-1 block font-body text-[14px] transition-colors duration-150";
+  "text-vynx-muted hover:text-vynx-text border-l-2 border-transparent pl-3 py-1 block font-body text-[14px] transition-colors duration-150";
 
 export default function DocsSidebar({ sections, title }: DocsSidebarProps) {
   const firstId = sections[0]?.items[0]?.href.replace(/^#/, "") ?? "";
@@ -100,7 +100,7 @@ export default function DocsSidebar({ sections, title }: DocsSidebarProps) {
 
   return (
     <aside className="hidden lg:flex flex-col w-70 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto pt-8 pr-8 pb-8 border-r border-[var(--color-border)]">
-      <p className="font-mono text-[11px] tracking-widest text-white uppercase mb-8">
+      <p className="font-mono text-[11px] tracking-widest text-vynx-text uppercase mb-8">
         {title}
       </p>
 

@@ -34,7 +34,7 @@ export default function CollateralBands() {
 
       {/* Eligibility math */}
       <div className="mt-6 bg-vynx-bg border border-[var(--color-border)] rounded-[2px] px-4 py-4">
-        <pre className="font-mono text-[12px] text-white leading-relaxed whitespace-pre overflow-x-auto">
+        <pre className="font-mono text-[12px] text-vynx-text leading-relaxed whitespace-pre overflow-x-auto">
 {`FreeCollateral = Total − InFlight
 Required       = InputAmount × 1.20      // SHF_THRESHOLD = 120
 eligible IFF     Free ≥ Required  AND  InFlight / Total < 0.80`}

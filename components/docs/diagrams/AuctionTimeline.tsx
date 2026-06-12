@@ -12,7 +12,7 @@ function Node({
       <div className="h-12 flex items-end justify-center pb-1">
         <span
           className={`font-mono text-[11px] tracking-[0.1em] uppercase text-center leading-tight ${
-            gold ? "text-vynx-gold" : "text-white"
+            gold ? "text-vynx-gold" : "text-vynx-text"
           }`}
         >
           {label}
@@ -24,8 +24,8 @@ function Node({
             cx="7"
             cy="7"
             r="4"
-            fill="#000000"
-            stroke={gold ? "#C9A84C" : "#888888"}
+            fill="var(--color-bg)"
+            stroke={gold ? "var(--color-gold)" : "var(--color-text-muted)"}
             strokeWidth="1.5"
           />
         </svg>

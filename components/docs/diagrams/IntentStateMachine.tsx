@@ -9,10 +9,10 @@ interface Node {
 
 const W = 120;
 const H = 44;
-const MUTED = "#888888";
-const GOLD = "#C9A84C";
-const WHITE = "#FFFFFF";
-const FAINT = "#7F7F7F";
+const MUTED = "var(--color-text-muted)";
+const GOLD = "var(--color-gold)";
+const WHITE = "var(--color-text-primary)";
+const FAINT = "var(--color-text-faint)";
 
 const nodes: Node[] = [
   { id: "pending", label: "PENDING", x: 10, y: 30, stroke: MUTED, text: WHITE },
@@ -94,7 +94,7 @@ export default function IntentStateMachine() {
                 width={W}
                 height={H}
                 rx="2"
-                fill="#000000"
+                fill="var(--color-bg)"
                 stroke={n.stroke}
                 strokeWidth="1"
               />

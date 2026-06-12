@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 const navLinks = [
   { label: "THESIS", href: "/thesis" },
@@ -17,8 +18,8 @@ const navLinks = [
 
 const baseLinkClass =
   "font-mono text-[11px] tracking-widest transition-colors duration-200";
-const activeLinkClass = `${baseLinkClass} text-white`;
-const inactiveLinkClass = `${baseLinkClass} text-vynx-muted hover:text-white`;
+const activeLinkClass = `${baseLinkClass} text-vynx-text`;
+const inactiveLinkClass = `${baseLinkClass} text-vynx-muted hover:text-vynx-text`;
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -29,7 +30,7 @@ export default function Navbar() {
       <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20 h-14 flex items-center justify-between">
         <Link
           href="/"
-          className="font-display text-[22px] tracking-[0.05em] text-white"
+          className="font-display text-[22px] tracking-[0.05em] text-vynx-text"
         >
           VYN<span className="text-vynx-gold">X</span>
         </Link>
@@ -58,10 +59,11 @@ export default function Navbar() {
               </Link>
             ),
           )}
+          <ThemeToggle />
         </div>
 
         <button
-          className="md:hidden text-vynx-muted hover:text-white transition-colors duration-200"
+          className="md:hidden text-vynx-muted hover:text-vynx-text transition-colors duration-200"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
           aria-expanded={open}
@@ -110,6 +112,7 @@ export default function Navbar() {
               </Link>
             ),
           )}
+          <ThemeToggle />
         </div>
       )}
     </nav>

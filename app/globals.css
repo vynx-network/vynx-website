@@ -11,6 +11,21 @@
   --color-gold-dim:     #8A7234;
   --color-border:       rgba(255, 255, 255, 0.08);
   --color-border-gold:  rgba(201, 168, 76, 0.4);
+  --color-live:         #4ADE80;
+}
+
+[data-theme="light"] {
+  --color-bg:           #F5F4F1;
+  --color-bg-card:      #FBFAF8;
+  --color-bg-subtle:    #ECEAE5;
+  --color-text-primary: #1A1A18;
+  --color-text-muted:   #56544E;
+  --color-text-faint:   #6B6960;
+  --color-gold:         #7E6826;
+  --color-gold-dim:     #A08A4E;
+  --color-border:       rgba(0, 0, 0, 0.10);
+  --color-border-gold:  rgba(126, 104, 38, 0.45);
+  --color-live:         #1F7A43;
 }
 
 @theme inline {
@@ -21,6 +36,8 @@
   --color-vynx-gold-dim:  var(--color-gold-dim);
   --color-vynx-muted:     var(--color-text-muted);
   --color-vynx-faint:     var(--color-text-faint);
+  --color-vynx-text:      var(--color-text-primary);
+  --color-vynx-on-gold:   var(--color-bg);
 
   --font-display: var(--font-display), sans-serif;
   --font-body:    var(--font-body), sans-serif;

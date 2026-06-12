@@ -40,7 +40,7 @@ export default function JailLadder() {
               />
               <span
                 className={`font-mono text-[12px] ${
-                  l.gold ? "text-vynx-gold" : "text-white"
+                  l.gold ? "text-vynx-gold" : "text-vynx-text"
                 }`}
               >
                 {l.n}

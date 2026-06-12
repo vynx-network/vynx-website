@@ -12,8 +12,8 @@ const base =
   "font-mono text-[11px] tracking-widest uppercase px-7 py-3 transition-all duration-200 inline-block";
 
 const styles = {
-  primary: `${base} border border-vynx-gold text-vynx-gold bg-transparent hover:bg-vynx-gold hover:text-black`,
-  secondary: `${base} border border-[var(--color-border)] text-vynx-muted bg-transparent hover:border-white hover:text-white`,
+  primary: `${base} border border-vynx-gold text-vynx-gold bg-transparent hover:bg-vynx-gold hover:text-vynx-on-gold`,
+  secondary: `${base} border border-[var(--color-border)] text-vynx-muted bg-transparent hover:border-vynx-text hover:text-vynx-text`,
 };
 
 export default function Button({ variant, children, href, target }: ButtonProps) {

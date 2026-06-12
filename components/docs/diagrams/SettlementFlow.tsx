@@ -57,7 +57,7 @@ export default function SettlementFlow() {
           {/* Content */}
           <div className={i < steps.length - 1 ? "pb-8" : ""}>
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="font-mono text-[11px] tracking-[0.15em] text-white uppercase">
+              <span className="font-mono text-[11px] tracking-[0.15em] text-vynx-text uppercase">
                 {step.phase}
               </span>
               <span className="font-mono text-[10px] tracking-[0.1em] text-vynx-faint uppercase">
@@ -80,7 +80,7 @@ export default function SettlementFlow() {
       <div className="mt-2 border-l-2 border-[var(--color-border-gold)] pl-4 ml-[13px]">
         <p className="font-body font-light text-[13px] text-vynx-muted leading-relaxed max-w-130">
           No fill by the deadline? Anyone can call{" "}
-          <span className="font-mono text-[12px] text-white">refundIntent()</span>{" "}
+          <span className="font-mono text-[12px] text-vynx-text">refundIntent()</span>{" "}
           to return the full amount to the agent — unilateral, no solver or
           governance approval required.
         </p>

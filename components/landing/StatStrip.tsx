@@ -18,7 +18,7 @@ export default function StatStrip() {
             .filter(Boolean)
             .join(" ")}
         >
-          <div className="font-display text-[48px] leading-none text-white">
+          <div className="font-display text-[48px] leading-none text-vynx-text">
             {stat.value}
           </div>
           <div className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-muted mt-2">

@@ -8,7 +8,7 @@ export default function ThesisHeader() {
         MAY 2026
       </p>
 
-      <h1 className="font-display text-section-headline leading-none text-white mb-6">
+      <h1 className="font-display text-section-headline leading-none text-vynx-text mb-6">
         THE M2M SETTLEMENT LAYER FOR THE AGENTIC ECONOMY.
       </h1>
 

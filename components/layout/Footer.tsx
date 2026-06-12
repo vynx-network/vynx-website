@@ -7,7 +7,7 @@ export default function Footer() {
         </span>
         <a
           href="mailto:cristian@vynx.network"
-          className="font-mono text-[11px] text-vynx-faint hover:text-white transition-colors duration-200"
+          className="font-mono text-[11px] text-vynx-faint hover:text-vynx-text transition-colors duration-200"
         >
           cristian@vynx.network
         </a>

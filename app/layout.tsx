@@ -3,6 +3,7 @@ import { Bebas_Neue, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ThemeProvider from "@/components/providers/ThemeProvider";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -65,11 +66,14 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${bebasNeue.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
     >
-      <body className="flex flex-col min-h-screen" suppressHydrationWarning>
-        <Navbar />
-        {children}
-        <Footer />
+      <body className="flex flex-col min-h-screen">
+        <ThemeProvider>
+          <Navbar />
+          {children}
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

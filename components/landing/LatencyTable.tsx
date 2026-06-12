@@ -58,7 +58,7 @@ export default function LatencyTable() {
         role="row"
         className={`${colClass} border border-[var(--color-border-gold)] rounded-[2px] py-4 px-3 mt-2 items-center`}
       >
-        <div role="cell" className="font-body text-[14px] text-white font-medium">
+        <div role="cell" className="font-body text-[14px] text-vynx-text font-medium">
           VynX OFA
         </div>
         <div
@@ -67,7 +67,7 @@ export default function LatencyTable() {
         >
           200ms
         </div>
-        <div role="cell" className="font-body text-[14px] text-white">
+        <div role="cell" className="font-body text-[14px] text-vynx-text">
           200ms (deterministic)
         </div>
         <div role="cell" className="font-mono text-[13px] text-vynx-faint">

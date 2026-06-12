@@ -121,7 +121,7 @@ const lifecycleRows = [
   },
   {
     status: "SETTLED",
-    statusClass: "font-mono text-[12px] text-white",
+    statusClass: "font-mono text-[12px] text-vynx-text",
     desc: "claimFunds() confirmed. Output delivered to agent.",
   },
   {
@@ -240,7 +240,7 @@ export default function AgentsPage() {
       {/* ── Overview ── */}
       <section id="overview" className="mb-20">
         <SectionLabel>OVERVIEW</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           WHAT IS AN AGENT
         </h2>
         <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
@@ -289,7 +289,7 @@ export default function AgentsPage() {
       {/* ── Quick Start ── */}
       <section id="quick-start" className="mb-20">
         <SectionLabel>QUICK START</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           THREE STEPS TO PRODUCTION
         </h2>
 
@@ -373,15 +373,15 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
       {/* ── SDK Reference ── */}
       <section id="sdk-reference" className="mb-20">
         <SectionLabel>SDK REFERENCE</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           @VYNX/SDK
         </h2>
 
         <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-[13px] text-white">@vynx-network/sdk</span>
+          <span className="font-mono text-[13px] text-vynx-text">@vynx-network/sdk</span>
           <a
             href="mailto:cristian@vynx.network"
-            className="font-mono text-[12px] text-vynx-gold hover:text-white transition-colors duration-200"
+            className="font-mono text-[12px] text-vynx-gold hover:text-vynx-text transition-colors duration-200"
           >
             REQUEST SDK ACCESS
           </a>
@@ -409,7 +409,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
               role="row"
               className={`${methodColClass} border-b border-[var(--color-border)] py-4 items-center`}
             >
-              <div role="cell" className="font-mono text-[13px] text-white">
+              <div role="cell" className="font-mono text-[13px] text-vynx-text">
                 {row.method}
               </div>
               <div
@@ -436,7 +436,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
       {/* ── EIP-712 Payload ── */}
       <section id="eip-712-payload" className="mb-20">
         <SectionLabel>SIGNED TERMS</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           INTENT STRUCTURE
         </h2>
         <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8">
@@ -474,7 +474,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
                 className={
                   row.goldField
                     ? "font-mono text-[12px] text-vynx-gold"
-                    : "font-mono text-[12px] text-white"
+                    : "font-mono text-[12px] text-vynx-text"
                 }
               >
                 {row.field}
@@ -500,7 +500,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
       {/* ── Intent Lifecycle ── */}
       <section id="intent-lifecycle" className="mb-20">
         <SectionLabel>INTENT LIFECYCLE</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           STATE MACHINE
         </h2>
 
@@ -562,14 +562,14 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
         <Card goldBorder className="mt-6">
           <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed">
             On EXPIRED: the agent receives a full{" "}
-            <span className="text-white font-medium">unilateral</span> refund.
+            <span className="text-vynx-text font-medium">unilateral</span> refund.
             No Solver approval required. No governance vote. The refund is
             enforced by{" "}
-            <span className="font-mono text-[13px] text-white">
+            <span className="font-mono text-[13px] text-vynx-text">
               DEFAULT_DEADLINE
             </span>{" "}
             in{" "}
-            <span className="font-mono text-[13px] text-white">
+            <span className="font-mono text-[13px] text-vynx-text">
               VynxSettlement.sol
             </span>
             .
@@ -580,7 +580,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
       {/* ── Error Handling ── */}
       <section id="error-handling" className="mb-20">
         <SectionLabel>ERROR HANDLING</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           FAILURE MODES
         </h2>
 
@@ -631,7 +631,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
         <Card className="mt-4">
           <p className="font-mono text-[12px] text-vynx-muted leading-relaxed">
             VynxSettlement.sol reverts and emits{" "}
-            <span className="text-white">SuspiciousRelayerActivity</span> if
+            <span className="text-vynx-text">SuspiciousRelayerActivity</span> if
             intentId is not found or Solver does not match on-chain record.
           </p>
         </Card>
@@ -641,15 +641,15 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
         </div>
         <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-8 max-w-140">
           Every error thrown by{" "}
-          <span className="font-mono text-[13px] text-white">executeSwap()</span>{" "}
+          <span className="font-mono text-[13px] text-vynx-text">executeSwap()</span>{" "}
           and{" "}
-          <span className="font-mono text-[13px] text-white">
+          <span className="font-mono text-[13px] text-vynx-text">
             getSwapStatus()
           </span>{" "}
           is a{" "}
-          <span className="font-mono text-[13px] text-white">VynxError</span>{" "}
+          <span className="font-mono text-[13px] text-vynx-text">VynxError</span>{" "}
           with a stable{" "}
-          <span className="font-mono text-[13px] text-white">code</span>. Match
+          <span className="font-mono text-[13px] text-vynx-text">code</span>. Match
           on the code, never the message. The class encodes whether capital is
           at risk.
         </p>
@@ -681,7 +681,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
                   >
                     <div
                       className={`font-mono text-[12px] ${
-                        cls.gold ? "text-vynx-gold" : "text-white"
+                        cls.gold ? "text-vynx-gold" : "text-vynx-text"
                       }`}
                     >
                       {row.code}
@@ -700,7 +700,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
       {/* ── FAQ ── */}
       <section id="faq" className="mb-20">
         <SectionLabel>FAQ</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           FREQUENTLY ASKED QUESTIONS
         </h2>
         <FaqAccordion items={agentFaqItems} />

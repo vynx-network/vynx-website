@@ -92,11 +92,11 @@ const integrationSteps = [
     body: (
       <>
         Call{" "}
-        <span className="font-mono text-[13px] text-white">
+        <span className="font-mono text-[13px] text-vynx-text">
           registerSolver()
         </span>{" "}
         on{" "}
-        <span className="font-mono text-[13px] text-white">
+        <span className="font-mono text-[13px] text-vynx-text">
           VynxRegistry.sol
         </span>{" "}
         on Ethereum L1. Your address is mapped to your Vault Adapter and
@@ -130,7 +130,7 @@ const integrationSteps = [
     body: (
       <>
         On winning:{" "}
-        <span className="font-mono text-[13px] text-white">auction_won</span>{" "}
+        <span className="font-mono text-[13px] text-vynx-text">auction_won</span>{" "}
         delivers the signed intent and the agent&rsquo;s authorization. Execute
         lockIntent() on Base from your own address — your transaction, your gas
         — within the 10 s SLA, then deliver the output to the agent on the
@@ -146,9 +146,9 @@ const integrationSteps = [
       <>
         Once the witness confirms your payment: redeem the relayer-signed
         voucher via{" "}
-        <span className="font-mono text-[13px] text-white">claimFunds()</span>{" "}
+        <span className="font-mono text-[13px] text-vynx-text">claimFunds()</span>{" "}
         on{" "}
-        <span className="font-mono text-[13px] text-white">
+        <span className="font-mono text-[13px] text-vynx-text">
           VynxSettlement.sol
         </span>
         . The contract cross-references intentId. Math irrefutable → funds move.
@@ -202,7 +202,7 @@ export default function SolversPage() {
       {/* ── Overview ── */}
       <section id="overview" className="mb-20">
         <SectionLabel>OVERVIEW</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           WHAT IS A SOLVER
         </h2>
         <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
@@ -244,7 +244,7 @@ export default function SolversPage() {
       {/* ── Prerequisites ── */}
       <section id="prerequisites" className="mb-20">
         <SectionLabel>PREREQUISITES</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           ENTRY REQUIREMENTS
         </h2>
         <div>
@@ -255,7 +255,7 @@ export default function SolversPage() {
             >
               <span className="font-mono text-[14px] text-vynx-gold">✓</span>
               <div>
-                <div className="font-mono text-[12px] tracking-wide text-white uppercase">
+                <div className="font-mono text-[12px] tracking-wide text-vynx-text uppercase">
                   {item.title}
                 </div>
                 <div className="font-body text-[13px] text-vynx-muted mt-1">
@@ -270,7 +270,7 @@ export default function SolversPage() {
       {/* ── Economics ── */}
       <section id="economics" className="mb-20">
         <SectionLabel>ECONOMICS</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           SOLVER ECONOMICS
         </h2>
 
@@ -296,12 +296,12 @@ export default function SolversPage() {
                 role="row"
                 className={`${econColClass} border-b border-[var(--color-border)] py-4 items-center`}
               >
-                <div role="cell" className="font-mono text-[12px] text-white">
+                <div role="cell" className="font-mono text-[12px] text-vynx-text">
                   {row.param}
                 </div>
                 <div
                   role="cell"
-                  className="font-display text-[18px] text-white leading-none"
+                  className="font-display text-[18px] text-vynx-text leading-none"
                 >
                   {row.value}
                 </div>
@@ -334,7 +334,7 @@ export default function SolversPage() {
       {/* ── Risk Framework ── */}
       <section id="risk-framework" className="mb-20">
         <SectionLabel>RISK FRAMEWORK</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           PENALTY MECHANICS
         </h2>
 
@@ -343,7 +343,7 @@ export default function SolversPage() {
         </div>
         <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-6">
           If the origin lock —{" "}
-          <span className="font-mono text-[13px] text-white">lockIntent()</span>{" "}
+          <span className="font-mono text-[13px] text-vynx-text">lockIntent()</span>{" "}
           — does not land within 10 seconds of adjudication, the winning Solver
           receives a Jail Time penalty. The counter escalates with each breach
           and resets after 90 days (N1–N4 only).
@@ -382,7 +382,7 @@ export default function SolversPage() {
                 role="row"
                 className={`${jailColClass} border-b border-[var(--color-border)] py-4 items-center`}
               >
-                <div role="cell" className="font-mono text-[12px] text-white">
+                <div role="cell" className="font-mono text-[12px] text-vynx-text">
                   {row.n}
                 </div>
                 <div
@@ -404,7 +404,7 @@ export default function SolversPage() {
               role="row"
               className={`${jailColClass} border border-[var(--color-border-gold)] rounded-[2px] py-4 px-3 mt-2 items-center`}
             >
-              <div role="cell" className="font-mono text-[12px] text-white">
+              <div role="cell" className="font-mono text-[12px] text-vynx-text">
                 N5
               </div>
               <div role="cell" className="font-mono text-[12px] text-vynx-gold">
@@ -427,7 +427,7 @@ export default function SolversPage() {
           If settlement is not completed within the agent&rsquo;s 15-minute
           deadline, a deterministic slash is applied. No oracle. No human
           discretion. The arithmetic is enforced by{" "}
-          <span className="font-mono text-[13px] text-white">
+          <span className="font-mono text-[13px] text-vynx-text">
             VynxRegistry.sol
           </span>{" "}
           on Ethereum L1.
@@ -449,7 +449,7 @@ export default function SolversPage() {
       {/* ── Integration ── */}
       <section id="integration" className="mb-20">
         <SectionLabel>INTEGRATION</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           INTEGRATION GUIDE
         </h2>
 
@@ -478,16 +478,16 @@ export default function SolversPage() {
         <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-6 max-w-140">
           Polling cannot meet the 200ms window — by the time a poll returns, the
           auction has closed. Connect to{" "}
-          <span className="font-mono text-[13px] text-white">/v1/ws</span> and
+          <span className="font-mono text-[13px] text-vynx-text">/v1/ws</span> and
           identify with{" "}
-          <span className="font-mono text-[13px] text-white">?solver=0x…</span>.
+          <span className="font-mono text-[13px] text-vynx-text">?solver=0x…</span>.
           The Relayer broadcasts{" "}
-          <span className="font-mono text-[13px] text-white">
+          <span className="font-mono text-[13px] text-vynx-text">
             intent_announced
           </span>{" "}
           to every connected Solver the moment an intent is accepted — before
           the window opens — and unicasts{" "}
-          <span className="font-mono text-[13px] text-white">auction_won</span>{" "}
+          <span className="font-mono text-[13px] text-vynx-text">auction_won</span>{" "}
           to the winner once the auction concludes.
         </p>
 
@@ -519,17 +519,17 @@ export default function SolversPage() {
       {/* ── SDK Reference ── */}
       <section id="sdk-reference" className="mb-20">
         <SectionLabel>SDK REFERENCE</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           @VYNX/SDK
         </h2>
 
         <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-[13px] text-white">
+          <span className="font-mono text-[13px] text-vynx-text">
             @vynx-network/sdk
           </span>
           <a
             href="mailto:cristian@vynx.network"
-            className="font-mono text-[12px] text-vynx-gold hover:text-white transition-colors duration-200"
+            className="font-mono text-[12px] text-vynx-gold hover:text-vynx-text transition-colors duration-200"
           >
             REQUEST SDK ACCESS
           </a>
@@ -553,7 +553,7 @@ export default function SolversPage() {
       {/* ── FAQ ── */}
       <section id="faq" className="mb-20">
         <SectionLabel>FAQ</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-white mb-8">
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
           FREQUENTLY ASKED QUESTIONS
         </h2>
         <FaqAccordion items={faqItems} />

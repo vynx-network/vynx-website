@@ -29,13 +29,13 @@ export default function CodeBlock({ code, language, label }: CodeBlockProps) {
           <button
             onClick={handleCopy}
             aria-label={copied ? "Copied" : "Copy code"}
-            className="font-mono text-[10px] text-vynx-faint hover:text-white transition-colors duration-200"
+            className="font-mono text-[10px] text-vynx-faint hover:text-vynx-text transition-colors duration-200"
           >
             {copied ? "COPIED" : "COPY"}
           </button>
         </div>
       )}
-      <pre className="px-4 py-4 overflow-x-auto font-mono text-[13px] text-white leading-relaxed whitespace-pre">
+      <pre className="px-4 py-4 overflow-x-auto font-mono text-[13px] text-vynx-text leading-relaxed whitespace-pre">
         {code}
       </pre>
     </div>
