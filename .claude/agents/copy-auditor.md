@@ -25,6 +25,29 @@ Key parameters (never alter):
 Audience: Tarun Chitra (Robot Ventures), Wei Dai (1kx), Wintermute Trading,
 institutional Solvers. Not retail. Not developers who need hand-holding.
 
+## Current Stage — Standing Facts (never contradict)
+
+The site reflects this exact stage. Never write copy that contradicts it.
+
+- Deployed + verified on Base Sepolia TESTNET. NOT on mainnet. Never imply mainnet production.
+- Contracts are built and BLINDAJE-hardened. NOT yet externally audited. Never claim "audited".
+- No contract addresses are pinned on the site. The full contract table (addresses + explorer
+  links) is a mainnet-launch feature. Do not add addresses.
+- The TypeScript SDK is functional and publish-ready but NOT published to npm. The package scope
+  is @vynx-network. Reference it as "request access under NDA" / "at launch" — never installable
+  today.
+- No GitHub links. The protocol repos are private; only the website repo is public. Do not add
+  GitHub references; the "see the code" path is REQUEST ACCESS.
+- Collateral is USDC only (DirectVaultAdapter, 1.20× SHF, oracle-less). EigenLayer/Symbiotic
+  restaking is roadmap via the IVaultAdapter seam — never present it as live.
+- Trust model: trust-minimized for terms and funds (the Relayer cannot alter the agent's signed
+  terms; funds are recovered by permissionless refund). It is NOT trustless and NOT
+  censorship-resistant — the single Relayer is a liveness single-point-of-failure. NEVER write
+  "trustless", "decentralized", "censorship-resistant", or "no single point of failure". The full
+  trust model lives in the docs, not in marketing copy.
+- Access is NDA-gated. The umbrella CTA is REQUEST ACCESS (mailto). NETWORK THESIS reads the
+  on-site thesis.
+
 ## Register
 
 **Target:** Jane Street internal memo. Flashbots research post. Cold, declarative,
@@ -65,6 +88,17 @@ Soft bans — flag for review:
 5. The first sentence of any paragraph is the thesis. The rest is evidence.
 6. Paragraphs maximum 3 sentences. If it needs more, split it.
 
+## Claim Discipline (hard)
+
+Every number must trace to a verifiable source. Specifically:
+
+- NO fabricated comparison multipliers ("Nx faster than X") without a real measurement.
+- NO UI that implies a measurement never taken — no "LIVE" badge, no "pNN" footnote on an
+  unmeasured figure.
+- An architectural contrast that is true by design (e.g. "sealed-bid, single-block clearing; no
+  batch window") is allowed; a measured-performance claim is not, unless measured.
+- If a number cannot be sourced, cut it or state the mechanism instead.
+
 ## Audit Protocol
 
 For each route and component:
@@ -73,7 +107,8 @@ For each route and component:
 2. Identify copy violations by category:
    [REGISTER] — wrong tone, startup vocabulary, hedging
    [WEAK] — passive voice, soft verbs, unnecessary qualifiers
-   [CLAIM] — assertion without data or verifiable source
+   [CLAIM] — assertion without data or a verifiable source (see Claim Discipline)
+   [STAGE] — contradicts a Standing Fact (mainnet/audit/SDK/addresses/GitHub/trust model)
    [STRUCTURE] — headline/subline/CTA violates structural rules
    [REDUNDANT] — says what another sentence already says
 3. Propose exact replacement — same character budget when possible
@@ -98,10 +133,6 @@ Rationale: "helps" is a soft verb. Replace with mechanism.
 Rationale: CTA must be a noun phrase or imperative, not an invitation to browse.
 
 ## Copy Principles for VynX Specifically
-
-The protocol is built and BLINDAJE-hardened, demonstrable on Base Sepolia testnet — NOT on
-mainnet, SDK NOT yet published. Use present tense ONLY for facts true now; use future /
-launch-gated tense for unpublished or mainnet-gated items.
 
 The audience has seen a thousand whitepapers. They are allergic to promise.
 What they respond to: mechanism, number, constraint, consequence.

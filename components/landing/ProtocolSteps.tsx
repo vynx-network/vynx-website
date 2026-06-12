@@ -71,7 +71,7 @@ export default function ProtocolSteps() {
       {/* Tagline */}
       <div className="mt-12 bg-vynx-bg-card border border-[var(--color-border)] rounded-[2px] py-5 px-6">
         <p className="font-body font-medium text-[16px] text-white border-l-2 border-vynx-gold pl-6">
-          &ldquo;Money does not move until the math is irrefutable.&rdquo;
+          Money does not move until the math is irrefutable.
         </p>
       </div>
     </>

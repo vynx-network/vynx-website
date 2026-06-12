@@ -55,18 +55,18 @@ export default function Distribution() {
         <NpmBlock />
 
         <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-140 -mt-4">
-          At launch: the developer installs. Agents route automatically. No wallet popups.
-          No brand preferences. No onboarding fatigue. An agent operates
-          indefinitely on 50 USDC and one off-chain signature per swap — zero
-          transactions, gas borne by the Solver, recovery permissionless.
+          At launch: the developer installs. Agents route automatically. No
+          wallet popups. No brand preferences. No onboarding fatigue. An agent
+          operates indefinitely on 50 USDC and one off-chain signature per swap
+          — zero transactions, gas borne by the Solver, recovery permissionless.
         </p>
 
         <ChainBadges />
 
         <div className="max-w-140">
           <p className="font-body font-medium text-[15px] text-white leading-relaxed">
-            &ldquo;There is no second-mover on settlement infrastructure. The
-            M2M standard is being defined now.&rdquo;
+            There is no second-mover on settlement infrastructure. The M2M
+            standard is being defined now.
           </p>
         </div>
       </div>

@@ -420,8 +420,7 @@ export default function ThesisPage() {
                   on-chain state transition.
                 </p>
                 <p className="text-white font-medium">
-                  &ldquo;Money does not move until the math is
-                  irrefutable.&rdquo;
+                  Money does not move until the math is irrefutable.
                 </p>
               </div>
             </Card>
@@ -525,9 +524,9 @@ export default function ThesisPage() {
 
             <Card goldBorder className="py-8 px-8">
               <p className="font-body italic text-[15px] text-vynx-muted leading-relaxed">
-                &ldquo;If Wintermute does not lock, GSR captures their share. If
-                GSR does not lock, Barter captures both. The equilibrium is
-                competitive overcollateralization.&rdquo;
+                If Wintermute does not lock, GSR captures their share. If GSR
+                does not lock, Barter captures both. The equilibrium is
+                competitive overcollateralization.
               </p>
               <div className="font-mono text-[10px] tracking-widest uppercase text-vynx-faint mt-4">
                 NASH EQUILIBRIUM · TERMINAL GAME THEORY
@@ -583,9 +582,9 @@ export default function ThesisPage() {
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
               <p>
                 The acquisition channel is not a sales team. It is a package
-                manager. At launch: any developer integrating the AgentKit plugin
-                puts their agents onto the VynX settlement rail.
-                The developer installs. Agents route automatically. No wallet
+                manager. At launch: any developer integrating the AgentKit
+                plugin puts their agents onto the VynX settlement rail. The
+                developer installs. Agents route automatically. No wallet
                 popups. No brand preferences. No onboarding fatigue.
               </p>
             </div>
@@ -666,8 +665,8 @@ export default function ThesisPage() {
 
             <Card goldBorder className="text-center py-10 mt-12">
               <p className="font-body font-medium text-[17px] text-white leading-relaxed max-w-120 mx-auto">
-                &ldquo;Whoever controls agentic settlement on Base in 2026 will
-                control the AI value highway for the next decade.&rdquo;
+                Whoever controls agentic settlement on Base in 2026 will control
+                the AI value highway for the next decade.
               </p>
               <p className="font-body text-[13px] text-vynx-muted mt-3 max-w-120 mx-auto">
                 This is not a prediction. It is the geometry of network effects

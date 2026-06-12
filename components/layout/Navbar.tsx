@@ -44,7 +44,7 @@ export default function Navbar() {
                 rel="noopener noreferrer"
                 className={inactiveLinkClass}
               >
-                {link.label} <span className="text-vynx-gold">↗</span>
+                {link.label}
               </a>
             ) : (
               <Link

@@ -38,9 +38,9 @@ function NashBlock() {
   return (
     <Card goldBorder className="py-8 px-8">
       <p className="font-body italic text-[15px] text-vynx-muted leading-relaxed">
-        &ldquo;If Wintermute does not lock, GSR captures their share. If GSR
-        does not lock, Barter captures both. The equilibrium is competitive
-        overcollateralization.&rdquo;
+        If Wintermute does not lock, GSR captures their share. If GSR does not
+        lock, Barter captures both. The equilibrium is competitive
+        overcollateralization.
       </p>
       <div className="font-mono text-[10px] tracking-widest uppercase text-vynx-faint mt-4">
         NASH EQUILIBRIUM · TERMINAL GAME THEORY
@@ -83,42 +83,42 @@ const reqColClass = "grid grid-cols-[1fr_80px_2fr]";
 function RequirementsGrid() {
   return (
     <div className="overflow-x-auto">
-    <div role="table" className="w-full min-w-120">
-      <div
-        role="row"
-        className={`${reqColClass} border-b border-[var(--color-border)] pb-3`}
-      >
-        {["PARAMETER", "VALUE", "DESCRIPTION"].map((h) => (
+      <div role="table" className="w-full min-w-120">
+        <div
+          role="row"
+          className={`${reqColClass} border-b border-[var(--color-border)] pb-3`}
+        >
+          {["PARAMETER", "VALUE", "DESCRIPTION"].map((h) => (
+            <div
+              key={h}
+              role="columnheader"
+              className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-faint"
+            >
+              {h}
+            </div>
+          ))}
+        </div>
+        {requirements.map((req) => (
           <div
-            key={h}
-            role="columnheader"
-            className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-faint"
+            key={req.param}
+            role="row"
+            className={`${reqColClass} border-b border-[var(--color-border)] py-4 items-center`}
           >
-            {h}
+            <div role="cell" className="font-mono text-[12px] text-white">
+              {req.param}
+            </div>
+            <div
+              role="cell"
+              className="font-display text-[18px] text-white leading-none"
+            >
+              {req.value}
+            </div>
+            <div role="cell" className="font-body text-[13px] text-vynx-muted">
+              {req.desc}
+            </div>
           </div>
         ))}
       </div>
-      {requirements.map((req) => (
-        <div
-          key={req.param}
-          role="row"
-          className={`${reqColClass} border-b border-[var(--color-border)] py-4 items-center`}
-        >
-          <div role="cell" className="font-mono text-[12px] text-white">
-            {req.param}
-          </div>
-          <div
-            role="cell"
-            className="font-display text-[18px] text-white leading-none"
-          >
-            {req.value}
-          </div>
-          <div role="cell" className="font-body text-[13px] text-vynx-muted">
-            {req.desc}
-          </div>
-        </div>
-      ))}
-    </div>
     </div>
   );
 }

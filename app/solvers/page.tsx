@@ -210,10 +210,10 @@ export default function SolversPage() {
             Solvers are the institutional supply side of the VynX OFA. A Solver
             is a market maker that competes in sealed-bid auctions to fill agent
             intents. The Solver with the highest OutputAmount wins each auction
-            and earns the spread between their bid and the agent&rsquo;s minimum.
-            The winning Solver executes the origin lock from its own address and
-            bears all gas; the agent&rsquo;s eight terms are bound by one
-            signature and cannot be altered.
+            and earns the spread between their bid and the agent&rsquo;s
+            minimum. The winning Solver executes the origin lock from its own
+            address and bears all gas; the agent&rsquo;s eight terms are bound
+            by one signature and cannot be altered.
           </p>
           <p>
             Participation requires locking USDC collateral above the SHF
@@ -275,53 +275,53 @@ export default function SolversPage() {
         </h2>
 
         <div className="overflow-x-auto">
-        <div role="table" className="w-full min-w-120">
-          <div
-            role="row"
-            className={`${econColClass} border-b border-[var(--color-border)] pb-3`}
-          >
-            {["PARAMETER", "VALUE", "DESCRIPTION"].map((h) => (
+          <div role="table" className="w-full min-w-120">
+            <div
+              role="row"
+              className={`${econColClass} border-b border-[var(--color-border)] pb-3`}
+            >
+              {["PARAMETER", "VALUE", "DESCRIPTION"].map((h) => (
+                <div
+                  key={h}
+                  role="columnheader"
+                  className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-faint"
+                >
+                  {h}
+                </div>
+              ))}
+            </div>
+            {econRows.map((row) => (
               <div
-                key={h}
-                role="columnheader"
-                className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-faint"
+                key={row.param}
+                role="row"
+                className={`${econColClass} border-b border-[var(--color-border)] py-4 items-center`}
               >
-                {h}
+                <div role="cell" className="font-mono text-[12px] text-white">
+                  {row.param}
+                </div>
+                <div
+                  role="cell"
+                  className="font-display text-[18px] text-white leading-none"
+                >
+                  {row.value}
+                </div>
+                <div
+                  role="cell"
+                  className="font-body text-[13px] text-vynx-muted"
+                >
+                  {row.desc}
+                </div>
               </div>
             ))}
           </div>
-          {econRows.map((row) => (
-            <div
-              key={row.param}
-              role="row"
-              className={`${econColClass} border-b border-[var(--color-border)] py-4 items-center`}
-            >
-              <div role="cell" className="font-mono text-[12px] text-white">
-                {row.param}
-              </div>
-              <div
-                role="cell"
-                className="font-display text-[18px] text-white leading-none"
-              >
-                {row.value}
-              </div>
-              <div
-                role="cell"
-                className="font-body text-[13px] text-vynx-muted"
-              >
-                {row.desc}
-              </div>
-            </div>
-          ))}
-        </div>
         </div>
 
         <Card className="mt-6">
           <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed">
-            &ldquo;The agent prioritizes sub-second settlement over marginal
-            cost. The Solver has already internalized the take rate in the bid
-            spread. The bytecode hard cap cryptographically guarantees
-            governance cannot be predatory.&rdquo;
+            The agent prioritizes sub-second settlement over marginal cost. The
+            Solver has already internalized the take rate in the bid spread. The
+            bytecode hard cap cryptographically guarantees governance cannot be
+            predatory.
           </p>
         </Card>
 
@@ -361,54 +361,63 @@ export default function SolversPage() {
         </p>
 
         <div className="overflow-x-auto">
-        <div role="table" className="w-full min-w-90 mb-4">
-          <div
-            role="row"
-            className={`${jailColClass} border-b border-[var(--color-border)] pb-3`}
-          >
-            {["N", "JAIL TIME", "TRIGGER"].map((h) => (
+          <div role="table" className="w-full min-w-90 mb-4">
+            <div
+              role="row"
+              className={`${jailColClass} border-b border-[var(--color-border)] pb-3`}
+            >
+              {["N", "JAIL TIME", "TRIGGER"].map((h) => (
+                <div
+                  key={h}
+                  role="columnheader"
+                  className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-faint"
+                >
+                  {h}
+                </div>
+              ))}
+            </div>
+            {jailRows.map((row) => (
               <div
-                key={h}
-                role="columnheader"
-                className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-faint"
+                key={row.n}
+                role="row"
+                className={`${jailColClass} border-b border-[var(--color-border)] py-4 items-center`}
               >
-                {h}
+                <div role="cell" className="font-mono text-[12px] text-white">
+                  {row.n}
+                </div>
+                <div
+                  role="cell"
+                  className="font-mono text-[12px] text-vynx-muted"
+                >
+                  {row.time}
+                </div>
+                <div
+                  role="cell"
+                  className="font-body text-[13px] text-vynx-muted"
+                >
+                  {row.trigger}
+                </div>
               </div>
             ))}
-          </div>
-          {jailRows.map((row) => (
+            {/* N5 row — gold highlight */}
             <div
-              key={row.n}
               role="row"
-              className={`${jailColClass} border-b border-[var(--color-border)] py-4 items-center`}
+              className={`${jailColClass} border border-[var(--color-border-gold)] rounded-[2px] py-4 px-3 mt-2 items-center`}
             >
               <div role="cell" className="font-mono text-[12px] text-white">
-                {row.n}
+                N5
               </div>
-              <div role="cell" className="font-mono text-[12px] text-vynx-muted">
-                {row.time}
+              <div role="cell" className="font-mono text-[12px] text-vynx-gold">
+                Permanent
               </div>
-              <div role="cell" className="font-body text-[13px] text-vynx-muted">
-                {row.trigger}
+              <div
+                role="cell"
+                className="font-body text-[13px] text-vynx-muted"
+              >
+                Fifth breach — amnesty-immune
               </div>
-            </div>
-          ))}
-          {/* N5 row — gold highlight */}
-          <div
-            role="row"
-            className={`${jailColClass} border border-[var(--color-border-gold)] rounded-[2px] py-4 px-3 mt-2 items-center`}
-          >
-            <div role="cell" className="font-mono text-[12px] text-white">
-              N5
-            </div>
-            <div role="cell" className="font-mono text-[12px] text-vynx-gold">
-              Permanent
-            </div>
-            <div role="cell" className="font-body text-[13px] text-vynx-muted">
-              Fifth breach — amnesty-immune
             </div>
           </div>
-        </div>
         </div>
 
         <div className="font-mono text-[10px] tracking-widest text-vynx-faint mb-3 mt-8">
@@ -515,7 +524,9 @@ export default function SolversPage() {
         </h2>
 
         <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-[13px] text-white">@vynx-network/sdk</span>
+          <span className="font-mono text-[13px] text-white">
+            @vynx-network/sdk
+          </span>
           <a
             href="mailto:cristian@vynx.network"
             className="font-mono text-[12px] text-vynx-gold hover:text-white transition-colors duration-200"
@@ -533,9 +544,9 @@ export default function SolversPage() {
         <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mt-6">
           The SDK signs the agent&rsquo;s EIP-3009 authorization client-side;
           there is no relayer-signed intent. The eight terms are agent-signed
-          and verified by USDC inside lockIntent(). Solvers do not need the
-          SDK — it is the agent-side integration layer. Solver integration is
-          at the WebSocket and contract level only.
+          and verified by USDC inside lockIntent(). Solvers do not need the SDK
+          — it is the agent-side integration layer. Solver integration is at the
+          WebSocket and contract level only.
         </p>
       </section>
 
