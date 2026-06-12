@@ -1,4 +1,4 @@
-# Getting Started — @vynx/sdk
+# Getting Started — @vynx-network/sdk
 
 This guide takes you from an empty project to a settled cross-chain swap.
 
@@ -34,7 +34,7 @@ recovery-path refund, the only transaction the SDK can ever send.
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
-import { VynxCore } from '@vynx/sdk';
+import { VynxCore } from '@vynx-network/sdk';
 
 const chain = base; // use baseSepolia for testnet
 
@@ -62,7 +62,7 @@ needed (only `8453` and `84532` are valid origins).
 ## 3. Your First Intent
 
 ```typescript
-import { VynxError, VynxErrorCode } from '@vynx/sdk';
+import { VynxError, VynxErrorCode } from '@vynx-network/sdk';
 
 try {
   const receipt = await vynx.executeSwap({
@@ -128,7 +128,7 @@ through the built-in `TOKEN_REGISTRY` (a public export — the source of truth f
 each chain's token addresses, including USDC):
 
 ```typescript
-import { TOKEN_REGISTRY } from '@vynx/sdk';
+import { TOKEN_REGISTRY } from '@vynx-network/sdk';
 
 // Symbol — resolved via TOKEN_REGISTRY for the targetChainId
 { targetToken: 'DEGEN', targetChainId: 8453 }

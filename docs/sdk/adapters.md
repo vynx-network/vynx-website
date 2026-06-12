@@ -1,6 +1,6 @@
-# Adapter Integration Guide — @vynx/sdk
+# Adapter Integration Guide — @vynx-network/sdk
 
-`@vynx/sdk` ships two optional framework adapters. Both wrap the same `VynxCore`
+`@vynx-network/sdk` ships two optional framework adapters. Both wrap the same `VynxCore`
 instance — the settlement logic is identical regardless of adapter, and both are
 created from a `VynxSdkConfig`. The flow is **gasless** through either adapter:
 the agent wallet signs one off-chain EIP-3009 authorization per swap and sends
@@ -18,7 +18,7 @@ an SWC-based bundler step.
 **Step 1 — Install**
 
 ```bash
-npm install @vynx/sdk @coinbase/agentkit reflect-metadata
+npm install @vynx-network/sdk @coinbase/agentkit reflect-metadata
 npm install --save-dev unplugin-swc @swc/core
 ```
 
@@ -59,7 +59,7 @@ export default defineConfig({
 ```typescript
 // agent.ts — must be the very first import
 import 'reflect-metadata';
-import { createVynxActionProvider } from '@vynx/sdk';
+import { createVynxActionProvider } from '@vynx-network/sdk';
 ```
 
 **Step 5 — Register**
@@ -97,7 +97,7 @@ reserved in v0.1.0 (output is delivered to the agent wallet).
 ### Prerequisites
 
 ```bash
-npm install @vynx/sdk @elizaos/core
+npm install @vynx-network/sdk @elizaos/core
 ```
 
 No additional bundler configuration required.
@@ -105,7 +105,7 @@ No additional bundler configuration required.
 ### Registration
 
 ```typescript
-import { createVynxPlugin } from '@vynx/sdk';
+import { createVynxPlugin } from '@vynx-network/sdk';
 
 export const character = {
   name: 'MyAgent',
@@ -130,7 +130,7 @@ Any TypeScript agent can use `VynxCore` directly — this is the lowest-overhead
 path and exposes the full `ExecuteSwapParams` (including `slippageBps`):
 
 ```typescript
-import { VynxCore } from '@vynx/sdk';
+import { VynxCore } from '@vynx-network/sdk';
 
 const vynx = new VynxCore({ walletClient, publicClient });
 const receipt = await vynx.executeSwap({
@@ -144,7 +144,7 @@ const receipt = await vynx.executeSwap({
 
 A new adapter:
 
-1. Imports `VynxCore` and `VynxSdkConfig` from `@vynx/sdk`.
+1. Imports `VynxCore` and `VynxSdkConfig` from `@vynx-network/sdk`.
 2. Instantiates `VynxCore` internally with the config.
 3. Wraps `core.executeSwap()` in the framework's plugin/action interface.
 4. Returns success/failure in the framework's expected shape, surfacing

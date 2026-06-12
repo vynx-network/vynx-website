@@ -113,17 +113,17 @@ post-claim math); a never-settled escrow reaches **REFUNDED** via `sendRefundInt
 
 ## Agent entry points
 
-Each agent surface is a thin wrapper over `@vynx/sdk` with `localQuoter` (1:1) by default.
+Each agent surface is a thin wrapper over `@vynx-network/sdk` with `localQuoter` (1:1) by default.
 All three pin to `baseSepolia` (chain-id 84532) and the local Base anvil.
 
 | File | Export | Surface |
 |---|---|---|
-| `agent-core.ts` | `executeSwap(params)`, `await buildIntentTerms(overrides)`, `signIntentAuthorization(terms, pk?)`, `computeIntentNonce` | `executeSwap` wraps the REAL `VynxCore` (one EIP-3009 signature, zero txs). `buildIntentTerms` (async — its default `deadline` is chain-relative `block.timestamp + 900`) + `signIntentAuthorization` are the direct-signing path for the raw-intent/trust-min/vector tests, REUSING the SDK's §D2 primitives via the `@vynx/sdk/internal` subpath |
+| `agent-core.ts` | `executeSwap(params)`, `await buildIntentTerms(overrides)`, `signIntentAuthorization(terms, pk?)`, `computeIntentNonce` | `executeSwap` wraps the REAL `VynxCore` (one EIP-3009 signature, zero txs). `buildIntentTerms` (async — its default `deadline` is chain-relative `block.timestamp + 900`) + `signIntentAuthorization` are the direct-signing path for the raw-intent/trust-min/vector tests, REUSING the SDK's §D2 primitives via the `@vynx-network/sdk/internal` subpath |
 | `agent-agentkit.ts` | `executeSwapViaAgentKit(params)` | `createVynxActionProvider().executeSwap` → parsed JSON. Imports `reflect-metadata` first (AgentKit decorators). No CDP env — local anvil only |
 | `agent-eliza.ts` | `executeSwapViaEliza(params)` | `createVynxPlugin()`; invokes the first registered action's `handler` → `{ success, destTxHash, ... }` |
 
 `SwapParams = { targetToken, amountUSD, targetChainId: 1|10|137|8453|42161, quoter? }`.
-`@coinbase/agentkit` and `@elizaos/core` are peer dependencies of `@vynx/sdk` required by
+`@coinbase/agentkit` and `@elizaos/core` are peer dependencies of `@vynx-network/sdk` required by
 the two adapter tests.
 
 Quoters: `local-quoter.ts` (`localQuoter`, 1:1) and `inflated-quoter.ts` (`inflatedQuoter`,

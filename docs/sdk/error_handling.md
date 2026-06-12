@@ -1,4 +1,4 @@
-# Error Handling — @vynx/sdk
+# Error Handling — @vynx-network/sdk
 
 Every error thrown by `executeSwap()` is an instance of `VynxError` with a stable
 `code` field. Never match on the `message` string — it may change between
@@ -6,7 +6,7 @@ versions. (`getSwapStatus()` never throws; transient errors surface as the
 `pending` state.)
 
 ```typescript
-import { VynxError, VynxErrorCode } from '@vynx/sdk';
+import { VynxError, VynxErrorCode } from '@vynx-network/sdk';
 
 try {
   const receipt = await vynx.executeSwap(params);

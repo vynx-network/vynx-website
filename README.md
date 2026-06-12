@@ -203,7 +203,7 @@ For developers arriving without context, VynX is:
 - A **200ms sealed-bid Order Flow Auction (OFA)** settlement layer for cross-chain transfer intents issued by AI agents.
 - Settling on **Base** (Base L2) — chosen for L1-grade security via fault proofs, sub-second blocks, and Coinbase-issued USDC as the canonical collateral and settlement token.
 - Deployed on **Base Sepolia**: `VynxSettlement` at `0xA0d462b84C2431463bDACDC2C5bc3172FC927B0B`.
-- Integrated via **`@vynx/sdk`** on npm (`import { VynxCore } from '@vynx/sdk'`).
+- Integrated via **`@vynx-network/sdk`** on npm (`import { VynxCore } from '@vynx-network/sdk'`).
 
 Full protocol documentation — settlement contracts, relayer architecture, and SDK guides — lives in [`docs/`](docs/) and is the source of truth for every claim on the site.
 

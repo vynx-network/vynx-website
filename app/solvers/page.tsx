@@ -515,7 +515,7 @@ export default function SolversPage() {
         </h2>
 
         <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-[13px] text-white">@vynx/sdk</span>
+          <span className="font-mono text-[13px] text-white">@vynx-network/sdk</span>
           <a
             href="mailto:cristian@vynx.network"
             className="font-mono text-[12px] text-vynx-gold hover:text-white transition-colors duration-200"
@@ -527,7 +527,7 @@ export default function SolversPage() {
         <CodeBlock
           language="bash"
           label="INSTALL · AT LAUNCH"
-          code="npm install @vynx/sdk"
+          code="npm install @vynx-network/sdk"
         />
 
         <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mt-6">

@@ -28,7 +28,7 @@ runs their artifacts:
 |---|---|---|
 | `vynx-relayer` | `bin/relayer`, `bin/watchdog` (Go, built with `-tags e2e`) | `make install-bins` builds them from `$RELAYER_REPO` into `./bin/` |
 | `vynx-settlement` | Solidity contracts (`DeployL1` / `DeployL2`) | `e2e.sh` deploys them onto the anvil forks via `forge script` |
-| `vynx-sdk` | `@vynx/sdk` (TypeScript) | installed as `file:../vynx-sdk`; the agent fixtures call it |
+| `vynx-sdk` | `@vynx-network/sdk` (TypeScript) | installed as `file:../vynx-sdk`; the agent fixtures call it |
 | `vynx-e2e` | `bin/solver` (Go test solver) | `make solver-build` compiles `solver/main.go` |
 
 The relayer is built with `-tags e2e`: it signs vouchers **in-process** from

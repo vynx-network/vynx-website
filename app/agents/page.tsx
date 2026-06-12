@@ -304,7 +304,7 @@ export default function AgentsPage() {
             <CodeBlock
               language="bash"
               label="INSTALL · AT LAUNCH"
-              code="npm install @vynx/sdk viem"
+              code="npm install @vynx-network/sdk viem"
             />
           </div>
         </div>
@@ -323,7 +323,7 @@ export default function AgentsPage() {
               code={`import { createWalletClient, createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
-import { VynxCore } from '@vynx/sdk'
+import { VynxCore } from '@vynx-network/sdk'
 
 const account = privateKeyToAccount(process.env.AGENT_PK)
 
@@ -378,7 +378,7 @@ const vynx = new VynxCore({ walletClient, publicClient })`}
         </h2>
 
         <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-[13px] text-white">@vynx/sdk</span>
+          <span className="font-mono text-[13px] text-white">@vynx-network/sdk</span>
           <a
             href="mailto:cristian@vynx.network"
             className="font-mono text-[12px] text-vynx-gold hover:text-white transition-colors duration-200"

@@ -596,7 +596,7 @@ export default function ThesisPage() {
               </div>
               <div className="font-mono text-[15px]">
                 <span className="text-vynx-muted">npm install </span>
-                <span className="text-white">@vynx/sdk</span>
+                <span className="text-white">@vynx-network/sdk</span>
               </div>
             </Card>
 
