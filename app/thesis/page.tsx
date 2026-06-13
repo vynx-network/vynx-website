@@ -77,16 +77,28 @@ const oligStats = [
   },
 ];
 
-const revenueColClasses = [
+const takeRateColClasses = [
   "py-6 md:pr-8 border-b md:border-b-0 md:border-r border-[var(--color-border)]",
   "py-6 md:px-8 border-b md:border-b-0 md:border-r border-[var(--color-border)]",
   "py-6 md:pl-8",
 ];
 
-const revenueStats = [
-  { value: "40%", label: "REAL YIELD", sublabel: "USDC · StakingRewards" },
-  { value: "50%", label: "BUYBACK & BURN", sublabel: "manual · anti-MEV" },
-  { value: "10%", label: "POL", sublabel: "operational treasury" },
+const takeRateStats = [
+  {
+    value: "10 bps",
+    label: "TAKE RATE IN FORCE",
+    sublabel: "Configurable beneath the cap.",
+  },
+  {
+    value: "20 bps",
+    label: "IMMUTABLE CEILING",
+    sublabel: "Not raisable by governance or upgrade.",
+  },
+  {
+    value: "FULL INPUT",
+    label: "FEE BASE",
+    sublabel: "Deducted atomically on settlement.",
+  },
 ];
 
 const chains = [
@@ -136,6 +148,7 @@ const thesisNav = [
       { label: "The Auction", href: "#s2-2" },
       { label: "The Origin Lock", href: "#s2-3" },
       { label: "Asymmetric Slashing", href: "#s2-4" },
+      { label: "The Deliberate Constraint", href: "#s2-5" },
     ],
   },
   {
@@ -436,24 +449,17 @@ export default function ThesisPage() {
             </h3>
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
               <p>
-                VynX operates a two-tier penalty system. Jail Time penalizes SLA
-                breaches: the 10-second lock clock arms only when the winning
-                Solver acknowledges the auction-won frame, and a Solver that
-                acknowledges then fails to execute{" "}
-                <span className="font-mono text-[13px] text-vynx-text">
-                  lockIntent()
-                </span>{" "}
-                within that window draws an escalating jail duration (N1: 60s,
-                N2: 10min, N3: 1h, N4: 24h, N5: permanent). A Solver that never
-                acknowledges forfeits the win to the next-best bid — it is not
-                jailed. Frame-delivery latency is a Relayer-side fault, never a
-                Solver penalty.
+                The penalty schedule is asymmetric by design: a Solver is held to
+                account only for what it controls. A win it never acknowledges is
+                re-auctioned to the next-best bid — never penalized. The protocol
+                arms a penalty only against a commitment the Solver actually made.
               </p>
               <p>
-                SlashAmount penalizes Deadline breaches. A Solver that fails to
-                complete settlement within the agent&rsquo;s 15-minute deadline
-                loses a deterministic fraction of its collateral and is jailed at
-                level 3 or higher — a missed deadline carries both penalties.
+                The agent&rsquo;s 15-minute deadline carries a dual penalty. A
+                Solver that locks and then misses it triggers both outcomes on the
+                same event: the agent is refunded in full, and the Solver is
+                slashed. The agent is made whole by the very mechanism that
+                punishes the failure.
               </p>
             </div>
 
@@ -468,13 +474,48 @@ export default function ThesisPage() {
 
             <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
               <p>
-                Slashing is enforced through VynxRegistry.sol on Ethereum L1 via
-                the DirectVaultAdapter — direct USDC custody, no yield protocol.
-                The 7-day unbonding period quarantines capital under resolution.
-                Amnesty resets after 90 days for infractions N1–N4. N5 is
-                permanent.
+                Enforcement is deterministic and dual-signature: a slash requires
+                two independent keys and clears on Ethereum L1 through
+                VynxRegistry.sol — direct USDC custody, no oracle, no discretion.
+                The incentives are not promised. They are enforced on-chain.
               </p>
             </div>
+          </section>
+
+          {/* §2.5 */}
+          <section id="s2-5" className="mb-12">
+            <h3 className="font-display text-[24px] text-vynx-text mb-4">
+              THE DELIBERATE CONSTRAINT
+            </h3>
+            <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6">
+              <p>
+                A 200-millisecond sealed-bid auction needs one authoritative
+                clock. So V1 runs a single Relayer — by design, not by oversight.
+                It is trust-minimized for terms and funds: the agent&rsquo;s
+                signed terms cannot be altered, and every voucher is bound
+                on-chain to a specific intent, Solver, and amount.
+              </p>
+              <p>
+                The Relayer is a liveness dependency, not a custodian. It can
+                delay a settlement; it can never seize funds. If it withholds, the
+                agent reclaims the full escrow through the permissionless refund.
+                Removing the single-Relayer dependency is a roadmap item, not a
+                blocker.
+              </p>
+            </div>
+
+            <Card goldBorder className="py-8 px-8">
+              <p className="font-body italic text-[15px] text-vynx-muted leading-relaxed">
+                A 200-millisecond sealed-bid auction needs one authoritative
+                clock. VynX V1 runs a single Relayer — by design. It is a
+                liveness dependency, not a custodian: it can delay a settlement,
+                never seize funds. If it withholds, the agent reclaims the full
+                escrow through the permissionless refund.
+              </p>
+              <div className="font-mono text-[10px] tracking-widest uppercase text-vynx-faint mt-4">
+                THE DELIBERATE CONSTRAINT · LIVENESS BY CHOICE
+              </div>
+            </Card>
           </section>
         </ThesisSection>
 
@@ -559,8 +600,8 @@ export default function ThesisPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3">
-              {revenueStats.map((stat, i) => (
-                <div key={stat.label} className={revenueColClasses[i]}>
+              {takeRateStats.map((stat, i) => (
+                <div key={stat.label} className={takeRateColClasses[i]}>
                   <div className="font-display text-[48px] leading-none text-vynx-text">
                     {stat.value}
                   </div>
@@ -573,11 +614,6 @@ export default function ThesisPage() {
                 </div>
               ))}
             </div>
-
-            <p className="font-mono text-[11px] text-vynx-faint mt-8 leading-relaxed">
-              1B VYNX hard-capped supply. No future mint. Small Giant
-              philosophy.
-            </p>
           </section>
         </ThesisSection>
 
