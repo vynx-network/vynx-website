@@ -15,13 +15,14 @@ export default function Hero() {
 
           {/* Headline */}
           <h1 className="font-display text-hero-headline leading-none text-vynx-text mt-4 text-balance">
-            DETERMINISTIC SETTLEMENT FOR THE M2M ECONOMY
+            DEFI WAS BUILT FOR HUMANS. AGENTS DON&rsquo;T WAIT.
           </h1>
 
           {/* Subline */}
-          <div className="mt-6 max-w-115">
+          <div className="mt-6 max-w-140">
             <p className="font-body font-light text-[17px] leading-relaxed text-vynx-muted">
-              DeFi was built for humans. Agents do not wait 30 seconds.
+              The deterministic settlement layer for the machine economy.
+              Trust-minimized for funds.
             </p>
           </div>
 

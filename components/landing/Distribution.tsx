@@ -11,7 +11,7 @@ const chains = [
 
 function NpmBlock() {
   return (
-    <Card>
+    <Card noHover>
       <div className="font-mono text-[10px] tracking-[0.15em] text-vynx-faint mb-3">
         DISTRIBUTION VECTOR · AT LAUNCH
       </div>
@@ -32,7 +32,7 @@ function ChainBadges() {
           className={
             chain.isBase
               ? "px-3 py-1.5 border rounded-xs font-mono text-[11px] tracking-wide border-(--color-border-gold) text-vynx-gold"
-              : "px-3 py-1.5 border rounded-xs font-mono text-[11px] tracking-wide border-(--color-border-gold) text-vynx-muted"
+              : "px-3 py-1.5 border rounded-xs font-mono text-[11px] tracking-wide border-[var(--color-border)] text-vynx-muted"
           }
         >
           {`${chain.name} · ${chain.id}`}
@@ -44,7 +44,7 @@ function ChainBadges() {
 
 export default function Distribution() {
   return (
-    <section className="py-24">
+    <section className="py-10">
       <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20 flex flex-col gap-12">
         <SectionLabel>DISTRIBUTION WITHOUT HUMANS</SectionLabel>
 

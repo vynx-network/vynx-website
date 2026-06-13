@@ -125,7 +125,7 @@ function RequirementsGrid() {
 
 export default function SolverProgram() {
   return (
-    <section className="py-24">
+    <section className="py-10">
       <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20 flex flex-col gap-12">
         <SectionLabel>SOLVER PROGRAM · FOUNDING COHORT</SectionLabel>
 

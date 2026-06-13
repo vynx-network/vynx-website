@@ -28,7 +28,7 @@ function ChecklistItem({ title, subtitle, address, link }: ChecklistItemProps) {
             href={link.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[12px] text-vynx-gold hover:text-vynx-text transition-colors duration-200 mt-1 inline-block"
+            className="font-mono text-[12px] text-vynx-gold mt-1 inline-block"
           >
             {link.label}
           </a>
@@ -45,7 +45,7 @@ const items: ChecklistItemProps[] = [
   },
   {
     title: "GO RELAYER ENGINE",
-    subtitle: "runs the 200ms sealed-bid OFA in the reviewer-demo",
+    subtitle: "runs the 200ms sealed-bid OFA, end to end on Base Sepolia",
   },
   {
     title: "TYPESCRIPT SDK",
@@ -53,13 +53,13 @@ const items: ChecklistItemProps[] = [
   },
   {
     title: "END-TO-END DEMO",
-    subtitle: "make reviewer-demo — full loop, end to end",
+    subtitle: "full settlement loop demonstrable under NDA",
   },
 ];
 
 export default function OnChainVerifiability() {
   return (
-    <section className="py-24">
+    <section className="py-10">
       <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20">
         <SectionLabel>BUILT · HARDENED · DEMONSTRABLE</SectionLabel>
         <h2 className="font-display text-section-headline leading-none text-vynx-text mb-0 text-balance">

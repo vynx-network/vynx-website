@@ -5,6 +5,7 @@ import ProtocolMechanics from "@/components/landing/ProtocolMechanics";
 import SolverProgram from "@/components/landing/SolverProgram";
 import Distribution from "@/components/landing/Distribution";
 import OnChainVerifiability from "@/components/landing/OnChainVerifiability";
+import Close from "@/components/landing/Close";
 
 export default function Home() {
   return (
@@ -16,6 +17,7 @@ export default function Home() {
       <SolverProgram />
       <Distribution />
       <OnChainVerifiability />
+      <Close />
     </main>
   );
 }

@@ -151,11 +151,9 @@ export default function DominanceMatrix({ compact }: DominanceMatrixProps) {
   }
 
   return (
-    <section className="py-24">
+    <section className="py-10">
       <div className="max-w-360 mx-auto px-6 md:px-12 lg:px-20">
-        <SectionLabel>
-          DOMINANCE MATRIX · PROTOCOL PHYSICAL CONSTANTS
-        </SectionLabel>
+        <SectionLabel>THE PHYSICAL CONSTANTS</SectionLabel>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {cards.map((card) => (
             <MetricCard key={card.label} {...card} />
