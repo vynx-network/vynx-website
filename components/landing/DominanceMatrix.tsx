@@ -31,7 +31,7 @@ function MetricCard({
 
   if (compact) {
     return (
-      <Card className="p-4 flex flex-col">
+      <Card className="p-4 flex flex-col" noHover>
         <div className="flex items-center gap-2">
           {dotColor && (
             <span
@@ -56,7 +56,7 @@ function MetricCard({
   }
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full" noHover>
       {/* Header */}
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-2">

@@ -193,7 +193,7 @@ export default function ThesisPage() {
                 { value: "$466M", label: "AGENTIC GDP" },
                 { value: "$80.25M", label: "VIRTUALS TVL" },
               ].map((s) => (
-                <Card key={s.label} className="p-4">
+                <Card key={s.label} className="p-4" noHover>
                   <div className="font-display text-[28px] text-vynx-text leading-none">
                     {s.value}
                   </div>
@@ -237,7 +237,7 @@ export default function ThesisPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 my-8">
               {spamStats.map((s) => (
-                <Card key={s.label} className="p-4">
+                <Card key={s.label} className="p-4" noHover>
                   <div className="font-display text-[32px] text-vynx-text leading-none">
                     {s.value}
                   </div>
@@ -383,7 +383,7 @@ export default function ThesisPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-              <Card>
+              <Card noHover>
                 <div className="font-mono text-[11px] tracking-wide text-vynx-muted mb-2">
                   01 EMPTY WALLET ATTACK
                 </div>
@@ -394,7 +394,7 @@ export default function ThesisPage() {
                   unit of their own liquidity.
                 </p>
               </Card>
-              <Card>
+              <Card noHover>
                 <div className="font-mono text-[11px] tracking-wide text-vynx-muted mb-2">
                   02 ORACLE DEPENDENCE
                 </div>
@@ -410,7 +410,7 @@ export default function ThesisPage() {
               </Card>
             </div>
 
-            <Card>
+            <Card noHover>
               <div className="font-mono text-[10px] tracking-[0.15em] text-vynx-faint mb-3">
                 ON-CHAIN SELF-DEFENSE
               </div>
@@ -457,7 +457,7 @@ export default function ThesisPage() {
               </p>
             </div>
 
-            <Card className="text-center py-8 my-6">
+            <Card className="text-center py-8 my-6" noHover>
               <div className="font-mono text-[16px] text-vynx-text">
                 SlashAmount = InputAmount × 10%
               </div>
@@ -598,7 +598,7 @@ export default function ThesisPage() {
               </p>
             </div>
 
-            <Card className="mb-6">
+            <Card className="mb-6" noHover>
               <div className="font-mono text-[10px] tracking-[0.15em] text-vynx-faint mb-3">
                 DISTRIBUTION VECTOR · AT LAUNCH
               </div>
@@ -658,7 +658,7 @@ export default function ThesisPage() {
 
             <div className="grid grid-cols-2 gap-3 my-8">
               {ultimatumStats.map((s) => (
-                <Card key={s.label} className="p-4">
+                <Card key={s.label} className="p-4" noHover>
                   <div className="font-display text-[32px] text-vynx-text leading-none">
                     {s.value}
                   </div>
