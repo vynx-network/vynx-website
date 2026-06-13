@@ -28,8 +28,38 @@ Anti-patterns that break this signal (treat as CRITICAL violations):
 - Decorative icons, illustrations, or visual noise
 - Colors outside the palette
 - Gold used as decoration rather than precision accent
-- Animations beyond hover transitions (200ms)
+- ANY animation, transition, transform, or scroll-reveal — except the single
+  permitted hover transition on a CTA button (see FLAT-DESIGN MANDATE below)
 - Any element that looks like a "startup landing page"
+
+---
+
+## FLAT-DESIGN MANDATE (campaign rule — overrides any softer guidance below)
+
+The site is FLAT. This was an explicit owner decision applied across every route.
+
+```
+PERMITTED MOTION:
+  ✓ Hover transition on PRIMARY CTA buttons ONLY (Button variant="primary"):
+    border/bg/text color change, transition 200ms. This is the ONE exception.
+
+FORBIDDEN MOTION (treat as CRITICAL):
+  ✗ Scroll-reveal / fade-in / slide-in / intersection-observer animation
+  ✗ transition-* on any non-CTA element (cards, links, badges, nav links,
+    checklist links, stat strips, diagrams)
+  ✗ transform / scale / translate on hover or otherwise
+  ✗ animate-* utilities of any kind
+  ✗ Card hover (border/bg) on landing/diagram cards — use the `noHover` prop
+
+NOTES:
+  - components/ui/Card.tsx carries a base `transition-colors` that backs the
+    permitted CTA-adjacent hover used on docs routes. Do NOT edit the shared
+    primitive to chase a single-page flat fix; instead pass `noHover` on the
+    specific card instance.
+  - The secondary Button (variant="secondary") hover is tolerated where it
+    pairs with a primary CTA, but a CTA pair is the only place a hover appears.
+  - When in doubt: if it moves and it is not a CTA button, it is a violation.
+```
 
 ---
 
@@ -73,19 +103,22 @@ PERMITTED:
   ✓ Highlighted table rows: VynX OFA, SLASHED lifecycle, N5 jail
   ✓ Section header numbers (§1.1, §2.4, etc.) in thesis
   ✓ The "↗" external link indicators next to Basescan/npm links
-  ✓ NashBlock and ThesisGate border-[var(--color-border-gold)]
-  ✓ Base chain badge (highlighted vs other chains)
+  ✓ NashBlock, ThesisGate, and the thesis "Deliberate Constraint" card
+    border-[var(--color-border-gold)]
+  ✓ The gold "result" row in MarginWaterfall / AgentCostWaterfall
+  ✓ The protective/winning beats + "Can never happen" column in
+    AuctionTimeline / AgentTimeline / TrustBoundary / FundsSafetyBoundary
+  ✓ Base chain badge ONLY (highlighted vs the other four chains, which are muted)
   ✓ FAQ toggle +/− symbols
-  ✓ Error card labels (CRITICAL category only — e.g., DEADLINE BREACH)
+  ✓ Error / penalty card labels (CRITICAL category only — e.g., DEADLINE BREACH)
 
 VIOLATIONS (remove gold, replace with text-white or text-vynx-muted):
   ✗ Stat strip labels (AGENTS ON BASE, JOBS COMPLETED, etc.)
-  ✗ Oligopoly stat labels (~90%, 50-60%, 80% section labels)
-  ✗ Revenue distribution labels (REAL YIELD, BUYBACK, etc.)
+  ✗ Oligopoly / take-rate stat labels (~90%, 50-60%, 80%, 10 bps, etc.)
   ✗ Protocol step titles (01 AGENT SIGNS, 02 SEALED BID, etc.)
   ✗ Requirements grid VALUE column (1.20×, USDC, 7 days, etc.)
-  ✗ SDK method names in /agents method table
   ✗ npm package name text (use text-white)
+  ✗ Non-Base chain badges (Ethereum / Arbitrum / Optimism / Polygon → muted)
   ✗ Any label that repeats the same gold across 6+ items on screen
     (dilutes the accent — gold loses meaning when overused)
 ```
@@ -136,7 +169,7 @@ MONO FONT: JetBrains Mono (font-mono)
 ### Border Radius — AMG Corners
 
 ```
-Cards, badges, table rows, code blocks: rounded-[2px]
+Cards, badges, table rows, code blocks: rounded-[2px]  (rounded-xs in v4 = 2px = OK)
 State indicator dots (4px × 4px):       rounded-full
 Everything else:                         NO border-radius
 
@@ -152,7 +185,15 @@ VIOLATIONS:
 
 ```
 VERTICAL RHYTHM:
-  Between major sections (landing):  py-24  (96px top + bottom)
+  Between sections (landing):        py-10  (40px top + 40px bottom = 80px
+                                     between stacked sections). This MATCHES the
+                                     docs-route rhythm (mb-20 = 80px) so the
+                                     landing reads as one cohesive system.
+                                     (CAMPAIGN OVERRIDE: previously py-24/96px,
+                                     which double-stacked to 192px and felt
+                                     over-aired against the other pages. Do NOT
+                                     revert landing sections to py-24.)
+  Between sections (docs routes):    mb-20  (80px) on each <section>
   Within a section:                  gap-12 between sub-elements
   Between components in a section:   gap-8
   Card internal padding:             p-6
@@ -161,21 +202,21 @@ VERTICAL RHYTHM:
   Section label → headline gap:      mb-8
 
 HORIZONTAL:
-  Page container padding:            px-6 (mobile) px-12 (md) px-16 (lg)
+  Page container padding:            px-6 (mobile) px-12 (md) px-16/20 (lg)
   Docs main content:                 px-12 py-16
   Card gap in grids:                 gap-4 to gap-6
 
-MAX-WIDTHS by route:
-  Landing (/):         No max-width on sections — full-width with internal padding
-  Thesis (/thesis):    max-w-[720px] mx-auto  — reading column
-  Docs (/solvers, /agents): sidebar 280px + max-w-[760px] main
-  Navbar:              full-width, internal padding matches page
-  Footer:              full-width, matches page padding
-
-CRITICAL: The thesis reading column (max-w-[720px]) creates a visual
-disconnect from the full-width navbar. The left edge of the content column
-must optically align with the navbar VYNX wordmark. If they are misaligned,
-this is a CRITICAL layout violation.
+MAX-WIDTHS by route (verified against current code):
+  Landing (/):         sections wrap content in max-w-360 mx-auto + internal
+                       px padding. Prose columns inside sections: max-w-140.
+  Thesis (/thesis):    served through DocsLayout + DocsSidebar (title
+                       "NETWORK THESIS"); it is NOT a bare max-w-[720px] column.
+                       Section prose: max-w-140/150. Verify the content column's
+                       left edge optically aligns with the navbar VYNX wordmark.
+  Docs (/solvers, /agents): DocsLayout — sidebar (~280px) + main content,
+                       section prose max-w-150.
+  Navbar:              full-width, internal padding matches page.
+  Footer:              full-width, matches page padding.
 ```
 
 ### Component Specifications
@@ -184,70 +225,64 @@ this is a CRITICAL layout violation.
 NAVBAR:
   Position: sticky top-0 z-50
   Background: bg-vynx-bg (no blur, no frosted glass)
-  Height: consistent, no explicit height — padding driven
   Padding: px-6 md:px-12 py-4
   Wordmark: font-display text-[22px] tracking-[0.05em] — "VYN" white, "X" gold
   Links: font-mono text-[11px] tracking-widest text-vynx-muted
-         hover:text-white transition-colors duration-200
-  GITHUB: includes "↗" symbol in gold
+         hover:text-white (color-only; permitted nav hover)
+  Nav links: THESIS · SOLVERS · AGENTS. There is NO public GitHub link
+             (protocol repos are private; the "see the code" path is the
+             REQUEST ACCESS / NDA flow). Do NOT add a GitHub link or "↗".
   Mobile: hamburger (hidden md:flex on links)
 
 FOOTER:
   Border: border-t border-[var(--color-border)]
   Font: font-mono text-[11px] text-vynx-faint
-  Content: wordmark + links + email + legal qualifier + copyright
+  Content: wordmark + links + email + legal qualifier + copyright (no GitHub)
 
 CARD (default):
   bg-vynx-bg-card
   border border-[var(--color-border)]
   rounded-[2px]
   p-6
-  hover:border-[var(--color-border-gold)] transition-colors duration-200
+  Use the `noHover` prop on landing/diagram cards (flat mandate). Card hover is
+  only acceptable where the card is itself an interactive CTA target, which on
+  this site it is not — prefer noHover.
 
 CARD (goldBorder):
   border border-[var(--color-border-gold)]  ← always on, not just hover
 
-BUTTON (primary):
-  border border-vynx-gold
-  text-vynx-gold
-  bg-transparent
-  font-mono text-[11px] tracking-widest uppercase
-  px-7 py-3
-  hover:bg-vynx-gold hover:text-black
-  transition-all duration-200
+BUTTON (primary):  THE ONLY PERMITTED HOVER ON THE SITE
+  border border-vynx-gold · text-vynx-gold · bg-transparent
+  font-mono text-[11px] tracking-widest uppercase · px-7 py-3
+  hover:bg-vynx-gold hover:text-black · transition 200ms
 
 BUTTON (secondary):
-  border border-[var(--color-border)]
-  text-vynx-muted
-  bg-transparent
-  hover:border-white hover:text-white
-  transition-all duration-200
+  border border-[var(--color-border)] · text-vynx-muted · bg-transparent
+  hover:border-white hover:text-white · transition 200ms
+  (Appears only paired with a primary CTA.)
 
 SECTION LABEL:
   font-mono text-[11px] tracking-[0.15em] text-vynx-gold
   horizontal line before: border-t border-[var(--color-border)] w-8 mr-3
   mb-8 after label, before headline
 
-METRIC CARD (DominanceMatrix):
-  Header row: state dot + label (mono faint) + badge (mono gold/green) right-aligned
-  State dot: 4px × 4px, rounded-full — green #4ADE80 (LIVE) or gold #C9A84C (BOUND)
-  Value: font-display text-[64px] leading-none text-white (full) / text-[40px] (compact)
+METRIC CARD (DominanceMatrix — section label "THE PHYSICAL CONSTANTS"):
+  Value: font-display text-[64px] (full) / text-[40px] (compact) text-white
   Unit: font-display text-[20px] text-vynx-muted
   Description: font-body font-light text-[13px] text-vynx-muted
-  Footnote: font-mono text-[10px] text-vynx-faint, bottom-right aligned
+  noHover. (NOTE: the component file is named DominanceMatrix.tsx but its
+  rendered SectionLabel is "THE PHYSICAL CONSTANTS" — do not "correct" the
+  label back to a comparison-matrix heading; it is honest by design.)
 
 CODE BLOCK:
-  bg-vynx-bg-card
-  border border-[var(--color-border)]
-  rounded-[2px]
-  Header (if label/language): px-4 py-2 border-b border-[var(--color-border)]
-    Label: font-mono text-[10px] tracking-widest text-vynx-faint uppercase
-    COPY button: right-aligned, same font, "COPIED" feedback 1.5s
+  bg-vynx-bg-card · border border-[var(--color-border)] · rounded-[2px]
   Code: px-4 py-4 font-mono text-[13px] text-white leading-relaxed overflow-x-auto
+  (Landing + the four marketing pages no longer ship copy-paste code recipes;
+  code blocks survive only as occasional credibility artifacts, never as
+  deployment instructions.)
 
 DOCS SIDEBAR:
-  Width: w-[280px] shrink-0
-  Position: sticky top-0 h-screen overflow-y-auto
+  Width: w-[280px] shrink-0 · sticky top-0 h-screen overflow-y-auto
   Border: border-r border-[var(--color-border)]
   Title: font-mono text-[11px] tracking-widest text-white uppercase
   Links: font-body text-[14px] text-vynx-muted hover:text-white py-1
@@ -260,7 +295,7 @@ TABLE (div-grid pattern):
            border-b border-[var(--color-border)] pb-3
   Rows: border-b border-[var(--color-border)] py-4
   Highlighted row: border border-[var(--color-border-gold)] rounded-[2px]
-  Tables with 3+ fixed columns: overflow-x-auto wrapper + min-w-[480px]
+  Tables with 3+ fixed columns: overflow-x-auto wrapper + min-w-120
 ```
 
 ### Responsive Breakpoints
@@ -269,8 +304,8 @@ TABLE (div-grid pattern):
 Mobile-first. md: is the primary breakpoint (768px).
 
 GRID COLLAPSES at mobile (< md):
-  4 columns → 2 columns (DominanceMatrix, stat strips compact)
-  3 columns → 1 column (OligopolyStats, revenue, error cards)
+  4 columns → 2 columns (DominanceMatrix, stat strips)
+  3 columns → 1 column (OligopolyStats, take-rate strip, error cards)
   2 columns (wide) → 1 column (ProtocolSteps, docs integration steps)
   4 horizontal steps → vertical stack (ProtocolSteps)
 
@@ -278,13 +313,14 @@ LAYOUT at mobile:
   DocsSidebar: hidden (hidden md:flex)
   Hero CTAs: flex-col when < 400px
   Navbar: hamburger
-  Tables: overflow-x-auto + min-w
+  Tables / horizontal timelines: overflow-x-auto + min-w (AuctionTimeline
+    min-w-180, AgentTimeline min-w-150)
 
 SPECIFIC VIOLATIONS to check:
   Latency table at 375px: fractional grid (2fr_1fr_2fr_1fr) — should scale OK
-  3-column fixed tables at 375px: need overflow-x-auto
-  4-column fixed tables at 375px: need overflow-x-auto
-  Stat strips (StatStrip, OligopolyStats): check 3-col → 1-col collapse
+  3-/4-column fixed tables at 375px: need overflow-x-auto
+  Stat strips (StatStrip, OligopolyStats, take-rate): check collapse
+  Diagram timelines: confirm horizontal scroll, never clipped
 ```
 
 ### Visual Hierarchy Rules
@@ -306,16 +342,34 @@ If body prose uses mono font → violation.
 ### Interactive States
 
 ```
-Hover transitions: 200ms ease — the only permitted duration
+Hover transition: 200ms ease — permitted ONLY on the primary CTA button
+  (and the paired secondary button). Nowhere else (FLAT-DESIGN MANDATE).
 Focus: 2px outline in gold offset 2px — accessibility requirement
-Active: scale(0.98) on buttons — optional but consistent if used
 Disabled: opacity-50 pointer-events-none
 
 VIOLATIONS:
-  Transitions > 300ms = too slow, startup aesthetic
-  Transitions < 100ms = too abrupt
-  No transition on interactive elements = violation
+  Any transition / animation / transform on a non-CTA element = CRITICAL
+  Transition on the CTA > 300ms = too slow
   Color-only focus indicators = accessibility violation
+```
+
+---
+
+## CONTENT / SCOPE GUARDRAILS (do not let a "visual" fix re-introduce these)
+
+You only change styles/layout — but flag (do NOT fix; surface to the owner) if a
+render exposes any of these standing-fact or scope violations, because a visual
+pass is the last gate before a screenshot reaches an investor:
+
+```
+- The words "trustless", "decentralized", "censorship-resistant", or "no single
+  point of failure" anywhere on screen.
+- Any token value-accrual claim (real yield, buyback, APY, staking split, POL).
+- Any pinned VynX contract address (0x…), endpoint, /v1/ path, or GitHub link.
+- "audited" (the contracts are BLINDAJE-hardened, NOT externally audited).
+- npm install shown as installable today (it is "AT LAUNCH" only).
+- Any mainnet-production implication (the stage is Base Sepolia testnet).
+- Internal dev jargon on a public surface (e.g. a `make` target).
 ```
 
 ---
@@ -325,85 +379,74 @@ VIOLATIONS:
 For each route, execute this exact sequence. Do not skip steps.
 
 ```
-STEP 1 — Desktop render
+STEP 1 — Desktop render (1440px)
   browser_navigate → http://localhost:3000{route}
-  browser_take_screenshot → save as screenshots/{route}-desktop.png
-  Viewport: 1440px width (default)
+  browser_take_screenshot → screenshots/{route}-desktop.png
 
-STEP 2 — Mobile render
-  Set viewport to 375px width
-  browser_navigate → http://localhost:3000{route}
-  browser_take_screenshot → save as screenshots/{route}-mobile.png
+STEP 2 — Tablet + Mobile render
+  Set viewport 820px, screenshot. Then 375px, screenshot.
+  (820px is the owner's reference device — verify the section rhythm there.)
 
 STEP 3 — Component read
-  Read all .tsx files used by this route
-  Cross-reference visual output (screenshots) with component code
+  Read all .tsx files used by this route; cross-reference render vs code.
 
-STEP 4 — Violation audit
-  For each violation found, classify:
-    [CRITICAL] Breaks the design system or creates functional UX failure
-               Examples: wrong border-radius, wrong font, layout breaks, gold overuse
-    [MINOR]    Inconsistency or softness that weakens the design signal
-               Examples: spacing inconsistency, visual hierarchy issues
-    [POLISH]   Refinement that would elevate but doesn't violate
-               Examples: micro-spacing, optional UX improvements
+STEP 4 — Violation audit. Classify each:
+    [CRITICAL] Breaks the design system / flat mandate / functional UX failure
+               (wrong radius, wrong font, layout break, gold overuse, ANY
+                non-CTA motion, a content/scope guardrail breach).
+    [MINOR]    Inconsistency that weakens the signal (spacing, hierarchy).
+    [POLISH]   Refinement that elevates but doesn't violate.
 
-STEP 5 — Report
-  Output all violations before implementing any fixes.
-  Format:
-    COMPONENT: filename.tsx:L{line}
-    SEVERITY: CRITICAL / MINOR / POLISH
-    VISUAL: what you see in the screenshot
-    CODE: what the code shows
-    FIX: exact Tailwind/CSS change
+STEP 5 — Report ALL violations before implementing any fix.
+  COMPONENT: filename.tsx:L{line}
+  SEVERITY / VISUAL (screenshot) / CODE / FIX (exact Tailwind change)
 
 STEP 6 — Implement
-  Fix ALL CRITICAL violations immediately.
-  Fix ALL MINOR violations immediately.
-  LIST POLISH items — do NOT implement (await instruction).
-  Surgical edits only — one violation = one edit.
-  Never restructure JSX. Never touch copy or data.
+  Fix ALL CRITICAL + MINOR immediately. LIST POLISH — do NOT implement.
+  Surgical edits only — one violation = one edit. Never restructure JSX.
+  Never touch copy or data. (Content/scope breaches → SURFACE, do not edit copy.)
 
 STEP 7 — Verify
-  browser_navigate → same route
-  browser_take_screenshot → screenshots/{route}-fixed.png
-  Compare against previous screenshot.
-  If new violations introduced → fix before moving on.
-  Run npm run build — must pass zero errors before proceeding to next route.
+  Re-navigate, re-screenshot, compare. New violation introduced → fix it.
+  Run `npm run build` — must pass zero errors before next route.
 
-STEP 8 — Next route
-  Repeat from STEP 1 for next route.
+STEP 8 — Next route.
 ```
 
 ### Route Priority Order
 
 ```
-1. /thesis     ← Start here. Body/navbar width disconnect is priority one.
-2. /           ← Landing. Most visible to VCs and institutional visitors.
-3. /solvers    ← Institutional audience. Must be precise.
-4. /agents     ← Developer audience. Code blocks and tables.
+1. /           ← Landing. First impression for VCs / institutional MMs. Highest stakes.
+2. /thesis     ← Content column ↔ navbar alignment; section rhythm.
+3. /solvers    ← Institutional audience. Diagrams (AuctionTimeline, CollateralBands,
+                 JailLadder, TrustBoundary, MarginWaterfall) must be precise + flat.
+4. /agents     ← Demand-side. Diagrams (AgentTimeline, FundsSafetyBoundary,
+                 AgentCostWaterfall, IntentStateMachine) + the 8-term table.
 ```
 
 ---
 
-## KNOWN ISSUES (pre-identified — verify and fix)
+## KNOWN STATE (post-campaign — verify, do not blindly "fix")
 
 ```
-1. /thesis — LAYOUT
-   The body content (max-w-[720px] mx-auto) visually disconnects from the
-   full-width navbar. The left edge of the content column doesn't align with
-   the navbar VYNX wordmark. Verify visually and correct alignment.
+1. FLAT is intentional sitewide. If you see no animations, that is correct —
+   do not "add polish" motion. The only hover is the CTA button.
 
-2. GOLD OVERUSE (sitewide)
-   Multiple components use text-vynx-gold for stat strip labels, step titles,
-   requirements VALUES, and table column values. Cross-check with the Gold
-   Discipline section. Replace diluting gold instances with text-white
-   (for VALUES/important data) or text-vynx-muted (for secondary labels).
+2. Landing section spacing is py-10 by design (matches docs mb-20 = 80px).
+   Do NOT revert to py-24.
 
-3. OVERFLOW-X on tables (mobile)
-   Solvers economics table, agents payload table, thesis architecture table —
-   fixed-column grids collapse at 375px. Verify overflow-x-auto wrappers are
-   in place and content is scrollable rather than clipped.
+3. Gold was deliberately de-diluted in a prior pass: non-Base chain badges are
+   muted, stat/step/value labels are white or muted. The remaining gold should
+   match the PERMITTED list exactly. Re-flag only genuine NEW overuse.
+
+4. DominanceMatrix.tsx renders the SectionLabel "THE PHYSICAL CONSTANTS"
+   (not "DOMINANCE MATRIX") — honest by design; leave it.
+
+5. components/ui/Card.tsx base carries a `transition-colors`. Do not strip it
+   from the shared primitive; pass `noHover` on instances instead.
+
+6. /thesis is rendered via DocsLayout + DocsSidebar, not a bare reading column.
+   Audit alignment against that layout, not against a max-w-[720px] assumption.
 ```
 
 ---
@@ -412,20 +455,24 @@ STEP 8 — Next route
 
 ```
 NEVER:
-  - Change copy, data, or content (only styles/layout)
+  - Change copy, data, or content (only styles/layout). Content/scope breaches
+    are SURFACED to the owner, never silently edited.
   - Change component structure (only className values)
   - Modify docs/ directory
   - Add new dependencies
-  - Change Tailwind token definitions in globals.css unless correcting
-    a factual error (e.g., wrong hex value)
+  - Re-introduce any motion beyond the CTA hover
+  - Revert the py-10 landing rhythm or the gold de-dilution
+  - Change Tailwind token definitions in globals.css unless correcting a
+    factual error (e.g., wrong hex value)
   - Implement POLISH items without explicit instruction
 
 ALWAYS:
-  - Verify visually after every fix
+  - Verify visually after every fix (desktop 1440 + tablet 820 + mobile 375)
   - Run npm run build before moving to next route
   - Save screenshots for before/after comparison
   - Report what you see AND what the code shows
   - Cross-reference gold usage against the Gold Discipline list
+  - Cross-reference motion against the FLAT-DESIGN MANDATE
 ```
 
 ---
@@ -435,28 +482,28 @@ ALWAYS:
 ```
 ## VISUAL AUDIT REPORT — VynX Network
 
-### Route: /thesis
-DESKTOP: [screenshot analysis]
-MOBILE:  [screenshot analysis]
+### Route: /
+DESKTOP / TABLET (820) / MOBILE (375): [screenshot analysis]
 
 CRITICAL (implemented):
   [list]
-
 MINOR (implemented):
   [list]
-
 POLISH (not implemented — pending instruction):
   [list]
-
+CONTENT/SCOPE FLAGS (surfaced, not edited):
+  [list — banned words, addresses, token claims, etc., or "none"]
 BUILD: OK / FAIL
 
 ---
 [repeat for each route]
 
+### FLAT-DESIGN SUMMARY
+Non-CTA motion found: [count] → removed: [count] → remaining: [should be 0]
+
 ### GOLD DISCIPLINE SUMMARY
-Before: [count of gold instances sitewide]
-After:  [count of gold instances sitewide]
-Remaining gold: [list of all remaining gold usages — should match permitted list]
+Before: [count sitewide] → After: [count]
+Remaining gold: [list — should match the PERMITTED list exactly]
 
 ### PENDING POLISH
 [complete list across all routes]

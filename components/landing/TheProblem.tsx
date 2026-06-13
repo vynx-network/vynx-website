@@ -9,7 +9,7 @@ export default function TheProblem() {
         <SectionLabel>THE STRUCTURAL COLLAPSE</SectionLabel>
 
         <h2 className="font-display text-section-headline leading-none text-vynx-text -mt-2 text-balance">
-          DEFI WAS DESIGNED FOR HUMANS
+          HUMAN INFRASTRUCTURE CANNOT CLEAR AT MACHINE SPEED
         </h2>
 
         <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-140 -mt-4">
