@@ -20,9 +20,6 @@ export default function Close() {
           <Button variant="primary" href="mailto:cristian@vynx.network">
             REQUEST ACCESS
           </Button>
-          <Button variant="secondary" href="/thesis">
-            NETWORK THESIS
-          </Button>
         </div>
 
         <p className="font-mono text-[10px] tracking-widest text-vynx-faint -mt-4">
