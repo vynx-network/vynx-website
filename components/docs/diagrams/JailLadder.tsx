@@ -52,13 +52,14 @@ export default function JailLadder() {
 
       <div className="mt-6 border-l-2 border-[var(--color-border-gold)] pl-4">
         <p className="font-mono text-[10px] tracking-[0.15em] text-vynx-gold uppercase">
-          90-DAY AMNESTY
+          PENALTY TRIGGERS · 90-DAY AMNESTY
         </p>
         <p className="font-body font-light text-[13px] text-vynx-muted leading-relaxed mt-2 max-w-130">
-          After 90 days of clean operation the N1–N4 counters reset. N5 is
-          amnesty-immune and permanent. Triggered only by an SLA breach — the
-          winning solver&rsquo;s lock (lockIntent()) not landing within 10 s of
-          winning.
+          The 10-second lock SLA arms on the winning solver&rsquo;s
+          acknowledgement of the win; a missed lock within that window escalates
+          the ladder. A missed 15-minute settlement deadline escalates
+          independently to level 3 or higher. After 90 days of clean operation
+          the N1&ndash;N4 counters reset; N5 is amnesty-immune and permanent.
         </p>
       </div>
     </div>

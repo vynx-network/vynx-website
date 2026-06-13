@@ -39,26 +39,46 @@ function Node({
   );
 }
 
-function Segment({ duration, note, gold }: { duration: string; note: string; gold?: boolean }) {
+function Segment({
+  duration,
+  note,
+  gold,
+  compact,
+}: {
+  duration?: string;
+  note: string;
+  gold?: boolean;
+  compact?: boolean;
+}) {
   return (
-    <div className="flex flex-col flex-1 min-w-16">
+    <div className={`flex flex-col flex-1 ${compact ? "min-w-12" : "min-w-16"}`}>
       <div className="h-12 flex items-end justify-center pb-1">
-        <span
-          className={`font-mono text-[11px] tracking-[0.05em] ${
-            gold ? "text-vynx-gold" : "text-vynx-muted"
-          }`}
-        >
-          {duration}
-        </span>
+        {duration && (
+          <span
+            className={`font-mono text-[11px] tracking-[0.05em] ${
+              gold ? "text-vynx-gold" : "text-vynx-muted"
+            }`}
+          >
+            {duration}
+          </span>
+        )}
       </div>
       <div className="h-6 flex items-center">
         <div
-          className="h-px w-full"
-          style={{
-            backgroundColor: gold
-              ? "var(--color-border-gold)"
-              : "var(--color-border)",
-          }}
+          className={`h-px w-full ${compact ? "border-t border-dashed" : ""}`}
+          style={
+            compact
+              ? {
+                  borderColor: gold
+                    ? "var(--color-border-gold)"
+                    : "var(--color-border)",
+                }
+              : {
+                  backgroundColor: gold
+                    ? "var(--color-border-gold)"
+                    : "var(--color-border)",
+                }
+          }
         />
       </div>
       <div className="h-12 pt-1 text-center">
@@ -70,6 +90,22 @@ function Segment({ duration, note, gold }: { duration: string; note: string; gol
   );
 }
 
+type Beat =
+  | { kind: "node"; label: string; sub: string; gold?: boolean }
+  | { kind: "seg"; duration?: string; note: string; gold?: boolean; compact?: boolean };
+
+const beats: Beat[] = [
+  { kind: "node", label: "Auction opens", sub: "intent broadcast" },
+  { kind: "seg", duration: "200 ms", note: "sealed-bid window" },
+  { kind: "node", label: "Winner", sub: "max OutputAmount", gold: true },
+  { kind: "seg", note: "won_ack", gold: true, compact: true },
+  { kind: "node", label: "Ack", sub: "arms your clock", gold: true },
+  { kind: "seg", duration: "10 s", note: "SLA · lock origin", gold: true },
+  { kind: "node", label: "Locked", sub: "escrow on Base" },
+  { kind: "seg", duration: "15 min", note: "deadline · settle", gold: true },
+  { kind: "node", label: "Settled", sub: "voucher claimed", gold: true },
+];
+
 export default function AuctionTimeline() {
   return (
     <div className="bg-vynx-bg-card border border-[var(--color-border)] rounded-[2px] p-6">
@@ -77,21 +113,28 @@ export default function AuctionTimeline() {
         SETTLEMENT TIMELINE · SOLVER OBLIGATIONS
       </div>
       <div className="overflow-x-auto">
-        <div className="flex items-stretch min-w-145">
-          <Node label="Auction opens" sub="intent_announced" />
-          <Segment duration="200 ms" note="sealed-bid window" />
-          <Node label="Winner" sub="max OutputAmount" gold />
-          <Segment duration="10 s" note="SLA · lockIntent()" gold />
-          <Node label="Locked" sub="escrow on Base" />
-          <Segment duration="15 min" note="deadline · settle" gold />
-          <Node label="Settled" sub="claimFunds()" gold />
+        <div className="flex items-stretch min-w-180 pl-2 w-max">
+          {beats.map((beat, i) =>
+            beat.kind === "node" ? (
+              <Node key={i} label={beat.label} sub={beat.sub} gold={beat.gold} />
+            ) : (
+              <Segment
+                key={i}
+                duration={beat.duration}
+                note={beat.note}
+                gold={beat.gold}
+                compact={beat.compact}
+              />
+            ),
+          )}
         </div>
       </div>
       <p className="font-body font-light text-[12px] text-vynx-faint leading-relaxed mt-4">
-        Not to scale. Miss the 200 ms window and your bid is discarded — no
-        penalty. If the winning solver&rsquo;s lock does not land within the
-        10 s SLA, Jail Time applies; miss the 15 min deadline and the position
-        is slashed 10%.
+        Not to scale. A bid arriving after the 200 ms window is dropped — no
+        penalty. Your 10-second lock SLA arms only when you acknowledge the win;
+        a win you never acknowledge is re-auctioned, never jailed. A locked
+        intent left unsettled past the 15-minute deadline is refunded to the
+        agent, and the solver is slashed 10% and jailed at level 3 or higher.
       </p>
     </div>
   );

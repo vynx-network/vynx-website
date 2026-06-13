@@ -4,154 +4,98 @@ import DocsSidebar from "@/components/layout/DocsSidebar";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import CodeBlock from "@/components/ui/CodeBlock";
 import FaqAccordion, { FaqItem } from "@/components/docs/FaqAccordion";
 import AuctionTimeline from "@/components/docs/diagrams/AuctionTimeline";
 import CollateralBands from "@/components/docs/diagrams/CollateralBands";
 import JailLadder from "@/components/docs/diagrams/JailLadder";
+import TrustBoundary from "@/components/docs/diagrams/TrustBoundary";
+import MarginWaterfall from "@/components/docs/diagrams/MarginWaterfall";
 
 export const metadata = {
-  title: { absolute: "VynX · Solvers Program" },
+  title: { absolute: "VynX · Solvers" },
   description:
-    "Institutional Solver documentation. Economics, risk framework, and integration guide for VynX founding cohort.",
+    "The solver role in VynX: a 200ms sealed-bid order-flow auction, origin-locked settlement, the economics, and the risk model. Founding-cohort access.",
 };
 
 const solverNav = [
   {
     items: [
       { label: "Overview", href: "#overview" },
-      { label: "Prerequisites", href: "#prerequisites" },
+      { label: "How It Works", href: "#how-it-works" },
       { label: "Economics", href: "#economics" },
-      { label: "Risk Framework", href: "#risk-framework" },
-      { label: "Integration", href: "#integration" },
-      { label: "SDK Reference", href: "#sdk-reference" },
+      { label: "Collateral", href: "#collateral" },
+      { label: "Risk", href: "#risk" },
+      { label: "Founding Cohort", href: "#cohort" },
       { label: "FAQ", href: "#faq" },
     ],
   },
 ];
 
-const econColClass = "grid grid-cols-[160px_120px_1fr]";
+const flowSteps = ["BROADCAST", "BID", "LOCK", "CLAIM"];
 
-const econRows = [
-  {
-    param: "Take Rate",
-    value: "10 bps",
-    desc: "Per successful intent. Atomically deducted.",
-  },
-  {
-    param: "Bytecode Cap",
-    value: "20 bps",
-    desc: "Hard cap in bytecode. Immutable. Governance-proof.",
-  },
-  {
-    param: "SlashAmount",
-    value: "10%",
-    desc: "InputAmount × 10%. 5% to agent, 5% to treasury.",
-  },
-  {
-    param: "Unbonding Period",
-    value: "7 days",
-    desc: "Capital quarantined post-slash.",
-  },
-  {
-    param: "MAX_EXPOSURE",
-    value: "80%",
-    desc: "Maximum in-flight exposure vs. locked collateral.",
-  },
-  {
-    param: "AMNESTY_EPOCH",
-    value: "90 days",
-    desc: "N1–N4 Jail Time counters reset. N5 is permanent.",
-  },
+const frameStats = [
+  { value: "~90%", label: "UNISWAPX", sub: "Top 3 fillers" },
+  { value: "50–60%", label: "COW PROTOCOL", sub: "Top 3 solvers" },
+  { value: "80%", label: "1INCH FUSION", sub: "Top 3 MMs" },
 ];
 
-const jailColClass = "grid grid-cols-[80px_120px_1fr]";
-
-const jailRows = [
-  { n: "N1", time: "60s", trigger: "First SLA breach" },
-  { n: "N2", time: "10 min", trigger: "Second breach (no amnesty reset)" },
-  { n: "N3", time: "1 hour", trigger: "Third breach" },
-  { n: "N4", time: "24 hours", trigger: "Fourth breach" },
+const frameStatClasses = [
+  "py-6 md:pr-8 border-b border-[var(--color-border)] md:border-b-0 md:border-r",
+  "py-6 md:px-8 border-b border-[var(--color-border)] md:border-b-0 md:border-r",
+  "py-6 md:pl-8",
 ];
 
-const integrationSteps = [
+const cycle = [
   {
-    num: "01",
-    title: "DEPOSIT COLLATERAL",
+    label: "THE AUCTION",
     body: (
       <>
-        Deposit USDC into the VynX DirectVaultAdapter on Ethereum L1 — direct
-        custody, no yield protocol. Minimum: SHF ≥ 1.20× your expected in-flight
-        exposure.
+        Each intent opens a 200ms sealed-bid window. You bid an OutputAmount;
+        the highest bid wins. Ties break to the higher Solver Health Factor,
+        then to the earlier timestamp.
       </>
     ),
   },
   {
-    num: "02",
-    title: "REGISTER IN VYNXREGISTRY",
+    label: "WINNING & ACKNOWLEDGEMENT",
     body: (
       <>
-        Call{" "}
-        <span className="font-mono text-[13px] text-vynx-text">
-          registerSolver()
-        </span>{" "}
-        on{" "}
-        <span className="font-mono text-[13px] text-vynx-text">
-          VynxRegistry.sol
-        </span>{" "}
-        on Ethereum L1. Your address is mapped to your Vault Adapter and
-        collateral position.
+        Your 10-second lock clock starts only when you acknowledge the win — not
+        when the auction closes. A win you never acknowledge is re-auctioned to
+        the next bid; you are never penalized for a fill you did not commit to.
+        This is the most solver-favorable rule in the protocol.
       </>
     ),
   },
   {
-    num: "03",
-    title: "CONNECT TO RELAYER WEBSOCKET",
+    label: "THE ORIGIN LOCK",
     body: (
       <>
-        Establish a persistent WebSocket connection to the VynX Relayer. You
-        will receive sealed intents via broadcast at auction open.
+        You lock the agent&rsquo;s capital on Base before you commit a unit of
+        your own liquidity on the destination. The agent&rsquo;s USDC is
+        escrowed on-chain before you pay anything. A rug-pull on the solver is
+        mathematically impossible.
       </>
     ),
   },
   {
-    num: "04",
-    title: "IMPLEMENT BID LOGIC",
+    label: "FULFILMENT & WITNESS",
     body: (
       <>
-        Respond with max(OutputAmount) within 200ms of broadcast. Tie-break:
-        max(SHF). Last resort: FIFO timestamp.
+        You pay the agent on the destination chain. An independent witness then
+        validates token, recipient, and amount against the agent-signed terms,
+        after chain finality. Your claim never depends on trust in the
+        counterparty.
       </>
     ),
   },
   {
-    num: "05",
-    title: "LOCK, THEN PAY",
+    label: "THE CLAIM",
     body: (
       <>
-        On winning:{" "}
-        <span className="font-mono text-[13px] text-vynx-text">auction_won</span>{" "}
-        delivers the signed intent and the agent&rsquo;s authorization. Execute
-        lockIntent() on Base from your own address — your transaction, your gas
-        — within the 10 s SLA, then deliver the output to the agent on the
-        destination chain. The witness validates token, recipient, and amount
-        against the agent-signed terms after finality.
-      </>
-    ),
-  },
-  {
-    num: "06",
-    title: "CLAIM FUNDS",
-    body: (
-      <>
-        Once the witness confirms your payment: redeem the relayer-signed
-        voucher via{" "}
-        <span className="font-mono text-[13px] text-vynx-text">claimFunds()</span>{" "}
-        on{" "}
-        <span className="font-mono text-[13px] text-vynx-text">
-          VynxSettlement.sol
-        </span>
-        . The contract cross-references intentId. Math irrefutable → funds move.
+        Once witnessed, you redeem the EIP-712 voucher and receive the
+        agent&rsquo;s locked input minus the take rate. The voucher binds your
+        address and the exact amount; it cannot be redirected.
       </>
     ),
   },
@@ -159,38 +103,32 @@ const integrationSteps = [
 
 const faqItems: FaqItem[] = [
   {
-    q: "What collateral is accepted?",
-    a: "Only USDC. The Asymmetric Asset Policy eliminates oracle dependency — SHF is a big.Int integer comparison in microseconds.",
+    q: "What must a Solver trust the Relayer for — and what can it never do?",
+    a: "The Relayer adjudicates the auction, witnesses the destination payment, and relays the EIP-712 voucher that releases your claim. It can never alter the agent's eight signed terms — any change breaks the EIP-3009 nonce and USDC rejects the lock — redirect funds, since the voucher binds intentId, solver, and amount and the agent's refund is permissionless, or slash you unilaterally, since a slash requires both the keeper role and an independent, immutable attester. It cannot sign vouchers itself: signing is isolated in a separate Signer holding its own key. VynX is trust-minimized for terms and funds — it does not ask you to trust the Relayer with either; the single Relayer is a liveness dependency, not a custodian.",
   },
   {
-    q: "Can I exit my collateral position at any time?",
-    a: "After the 7-day unbonding period. There is no instant exit. This is a feature — it guarantees agent compensation on Deadline breach.",
+    q: "If the Relayer is unresponsive after I have paid on the destination chain, what happens to my capital?",
+    a: "Voucher issuance depends on Relayer liveness — this is the honest hard edge. The Relayer cannot misdirect your voucher; it binds your address and the exact amount, and on recovery the deterministic witness re-issues it. The worst case is a prolonged outage past the 15-minute deadline after you have fulfilled: the agent is refunded on-chain and your destination capital is exposed until the Relayer resumes. Per-intent exposure is bounded by the $50–$500 ticket, and Relayer high-availability is part of the operational posture discussed with founding partners.",
   },
   {
-    q: "What happens if I miss the 200ms window?",
-    a: "Your bid is discarded. No penalty. Jail Time only triggers on SLA breach — your lock not landing within 10 seconds of adjudication.",
+    q: "Are the contracts audited?",
+    a: "The contracts are hardened against a formal internal threat model — the BLINDAJE program — but are not yet externally audited. An external audit is a gate before mainnet. Founding-cohort integration runs on Base Sepolia testnet.",
   },
   {
-    q: "Is there a minimum collateral amount?",
-    a: "No hard minimum in the protocol. Practical minimum: enough to maintain SHF ≥ 1.20× on your expected in-flight exposure, with MAX_EXPOSURE ≤ 80%.",
-  },
-];
-
-const flowSteps = ["BROADCAST", "BID", "LOCK", "CLAIM"];
-
-const prereqs = [
-  {
-    title: "USDC COLLATERAL",
-    sub: "Deposited in the VynX DirectVaultAdapter (USDC, Ethereum L1)",
-  },
-  { title: "SHF ≥ 1.20×", sub: "Maintained at all times" },
-  {
-    title: "MAX_SOLVER_EXPOSURE ≤ 80%",
-    sub: "Maximum in-flight exposure at all times",
+    q: "Can I be slashed unfairly, or griefed by the penalty system?",
+    a: "No discretionary slashing exists. A slash is deterministic — InputAmount × 10%, split 5% to the affected agent and 5% to the treasury — fires at most once per intent, and only after you have locked an intent and missed its 15-minute settlement deadline. It requires two independent signatures, the keeper and an immutable attester, so no single party can slash, inflate, or redirect it. Your 10-second lock SLA arms only when you acknowledge the win, so you are never penalized for a fill you do not control.",
   },
   {
-    title: "200MS WEBSOCKET INFRASTRUCTURE",
-    sub: "Capable of responding within the auction window",
+    q: "Why can't an incumbent simply clone the 200ms auction?",
+    a: "The auction is the visible primitive, not the moat. The defensible parts are the gasless, origin-locked settlement design and the go-to-market: VynX captures the same institutional solvers who already concentrate the existing rails rather than recruiting a new supply side. Reproducing a sealed-bid window does not reproduce the settlement system or the flow.",
+  },
+  {
+    q: "Which chains must I support, and how heavy is integration?",
+    a: "Five destinations — Base, Ethereum, Arbitrum, Optimism, and Polygon. Integration is at the WebSocket and contract level; solvers do not use the agent SDK. A reference solver implementation is provided to cohort partners.",
+  },
+  {
+    q: "What is the path to mainnet and real volume?",
+    a: "Testnet today; an external audit, pinned mainnet addresses, and a published SDK at launch; then the founding cohort goes live.",
   },
 ];
 
@@ -199,27 +137,25 @@ export default function SolversPage() {
     <DocsLayout
       sidebar={<DocsSidebar title="SOLVERS PROGRAM" sections={solverNav} />}
     >
-      {/* ── Overview ── */}
+      {/* ── Overview · The Frame ── */}
       <section id="overview" className="mb-20">
         <SectionLabel>OVERVIEW</SectionLabel>
         <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
-          WHAT IS A SOLVER
+          THE SUPPLY SIDE OF THE AUCTION
         </h2>
         <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed">
           <p>
-            Solvers are the institutional supply side of the VynX OFA. A Solver
-            is a market maker that competes in sealed-bid auctions to fill agent
-            intents. The Solver with the highest OutputAmount wins each auction
-            and earns the spread between their bid and the agent&rsquo;s
-            minimum. The winning Solver executes the origin lock from its own
-            address and bears all gas; the agent&rsquo;s eight terms are bound
-            by one signature and cannot be altered.
+            A Solver is an institutional market maker that competes in a 200ms
+            sealed-bid order-flow auction to fill agent intents. The highest
+            OutputAmount wins. The winner locks the origin on Base from its own
+            address, bears the gas, fulfils on the destination chain, and
+            redeems a voucher for the agent&rsquo;s locked USDC minus the take
+            rate.
           </p>
           <p>
-            Participation requires locking USDC collateral above the SHF
-            threshold (≥ 1.20×), maintaining exposure limits, and operating
-            WebSocket infrastructure capable of responding within the 200ms
-            auction window.
+            The supply side is already concentrated. Three to five names clear
+            the majority of every existing intent rail. VynX does not recruit a
+            new supply side; it captures the one that exists.
           </p>
         </div>
 
@@ -236,318 +172,245 @@ export default function SolversPage() {
           ))}
         </div>
 
-        <div className="mt-8">
-          <AuctionTimeline />
-        </div>
-      </section>
-
-      {/* ── Prerequisites ── */}
-      <section id="prerequisites" className="mb-20">
-        <SectionLabel>PREREQUISITES</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
-          ENTRY REQUIREMENTS
-        </h2>
-        <div>
-          {prereqs.map((item) => (
-            <div
-              key={item.title}
-              className="grid grid-cols-[20px_minmax(0,1fr)] gap-4 items-start py-4 border-b border-[var(--color-border)]"
-            >
-              <span className="font-mono text-[14px] text-vynx-gold">✓</span>
-              <div>
-                <div className="font-mono text-[12px] tracking-wide text-vynx-text uppercase">
-                  {item.title}
-                </div>
-                <div className="font-body text-[13px] text-vynx-muted mt-1">
-                  {item.sub}
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 mt-8">
+          {frameStats.map((stat, i) => (
+            <div key={stat.label} className={frameStatClasses[i]}>
+              <div className="font-display text-[48px] leading-none text-vynx-text">
+                {stat.value}
+              </div>
+              <div className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-muted mt-2">
+                {stat.label}
+              </div>
+              <div className="font-mono text-[10px] text-vynx-faint mt-1">
+                {stat.sub}
               </div>
             </div>
           ))}
         </div>
+
+        <Card goldBorder className="py-8 px-8 mt-8">
+          <p className="font-body italic text-[15px] text-vynx-muted leading-relaxed">
+            If Wintermute does not lock, GSR captures the share. If GSR does not
+            lock, the next name does. The equilibrium is competitive
+            overcollateralization, and a founding-cohort seat is the position on
+            offer — not a signup.
+          </p>
+          <div className="font-mono text-[10px] tracking-widest uppercase text-vynx-faint mt-4">
+            NASH EQUILIBRIUM · THE SUPPLY SIDE
+          </div>
+        </Card>
       </section>
 
-      {/* ── Economics ── */}
+      {/* ── How Settlement Works · The Narrative ── */}
+      <section id="how-it-works" className="mb-20">
+        <SectionLabel>HOW IT WORKS</SectionLabel>
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
+          THE SETTLEMENT CYCLE
+        </h2>
+
+        <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8 max-w-150">
+          One intent, from the solver&rsquo;s side, in five steps. The order of
+          operations is the whole safety argument: the agent&rsquo;s capital is
+          locked on-chain before you part with any of your own.
+        </p>
+
+        <div className="mb-10">
+          {cycle.map((step, i) => (
+            <div
+              key={step.label}
+              className="grid grid-cols-[32px_minmax(0,1fr)] gap-4 mb-6 items-start"
+            >
+              <span className="font-display text-[22px] text-vynx-faint leading-none pt-0.5">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <div className="font-mono text-[11px] tracking-[0.12em] text-vynx-gold uppercase mb-2">
+                  {step.label}
+                </div>
+                <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed max-w-150">
+                  {step.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mb-8">
+          <AuctionTimeline />
+        </div>
+
+        <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-6 max-w-150">
+          What the Relayer orchestrates and what it can never touch are two
+          different lists. The second list is the one that matters to a solver.
+        </p>
+
+        <TrustBoundary />
+      </section>
+
+      {/* ── Economics · The Prize ── */}
       <section id="economics" className="mb-20">
         <SectionLabel>ECONOMICS</SectionLabel>
         <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
-          SOLVER ECONOMICS
+          THE SPREAD IS THE PRIZE
         </h2>
 
-        <div className="overflow-x-auto">
-          <div role="table" className="w-full min-w-120">
-            <div
-              role="row"
-              className={`${econColClass} border-b border-[var(--color-border)] pb-3`}
-            >
-              {["PARAMETER", "VALUE", "DESCRIPTION"].map((h) => (
-                <div
-                  key={h}
-                  role="columnheader"
-                  className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-faint"
-                >
-                  {h}
-                </div>
-              ))}
-            </div>
-            {econRows.map((row) => (
-              <div
-                key={row.param}
-                role="row"
-                className={`${econColClass} border-b border-[var(--color-border)] py-4 items-center`}
-              >
-                <div role="cell" className="font-mono text-[12px] text-vynx-text">
-                  {row.param}
-                </div>
-                <div
-                  role="cell"
-                  className="font-display text-[18px] text-vynx-text leading-none"
-                >
-                  {row.value}
-                </div>
-                <div
-                  role="cell"
-                  className="font-body text-[13px] text-vynx-muted"
-                >
-                  {row.desc}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Card className="mt-6">
-          <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed">
-            The agent prioritizes sub-second settlement over marginal cost. The
-            Solver has already internalized the take rate in the bid spread. The
-            bytecode hard cap cryptographically guarantees governance cannot be
-            predatory.
+        <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-150 mb-8">
+          <p>
+            VynX takes 10 bps on a successful intent, deducted atomically at
+            settlement. The bytecode caps the take rate at 20 bps — an immutable
+            ceiling no governance can raise. The 10 bps in force today is the
+            configurable value beneath that cap, not the cap itself.
           </p>
-        </Card>
-
-        <div className="font-mono text-[10px] tracking-widest text-vynx-faint mt-12 mb-6">
-          ELIGIBILITY MATH · SOLVER HEALTH FACTOR
+          <p>
+            Your fee is not the protocol&rsquo;s fee. A solver&rsquo;s gross is
+            the spread between what it claims — the agent&rsquo;s input minus the
+            10 bps take rate — and what it delivers as its winning bid, less
+            destination gas and the cost of capital in flight. The sealed-bid
+            auction compresses that spread toward marginal cost: every basis
+            point you keep is one a rival can bid away.
+          </p>
+          <p>
+            Tickets run $50 to $500 USDC per intent. The book is small-ticket
+            and high-frequency — an inventory and latency problem, not a
+            balance-sheet one.
+          </p>
         </div>
+
+        <MarginWaterfall />
+      </section>
+
+      {/* ── Collateral & Eligibility · The Math ── */}
+      <section id="collateral" className="mb-20">
+        <SectionLabel>COLLATERAL</SectionLabel>
+        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
+          ELIGIBILITY IS ARITHMETIC
+        </h2>
+
+        <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-150 mb-8">
+          <p>
+            Collateral is USDC, held in direct custody on Ethereum L1 through the
+            DirectVaultAdapter. No external protocol sits beneath it; the capital
+            stays slashable on the spot.
+          </p>
+          <p>
+            To bid, your free collateral must cover the intent at a Solver Health
+            Factor of 1.20× or higher. The check is a USDC integer comparison —
+            no oracle, no price feed, no conversion. It either holds or it does
+            not.
+          </p>
+          <p>
+            In-flight exposure may never reach 80% of locked collateral. The 20%
+            reserve is the buffer that keeps an open position able to be made
+            whole.
+          </p>
+        </div>
+
         <CollateralBands />
       </section>
 
-      {/* ── Risk Framework ── */}
-      <section id="risk-framework" className="mb-20">
-        <SectionLabel>RISK FRAMEWORK</SectionLabel>
+      {/* ── Risk & Penalties · The Honest Downside ── */}
+      <section id="risk" className="mb-20">
+        <SectionLabel>RISK</SectionLabel>
         <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
-          PENALTY MECHANICS
+          EVERY PENALTY IS EARNED
         </h2>
 
-        <div className="font-mono text-[10px] tracking-widest text-vynx-faint mb-3">
-          JAIL TIME · SLA BREACH · T = 10s
-        </div>
-        <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-6">
-          If the origin lock —{" "}
-          <span className="font-mono text-[13px] text-vynx-text">lockIntent()</span>{" "}
-          — does not land within 10 seconds of adjudication, the winning Solver
-          receives a Jail Time penalty. The counter escalates with each breach
-          and resets after 90 days (N1–N4 only).
+        <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed mb-8 max-w-150">
+          VynX penalizes two things, and only two. Both are actions a solver
+          chooses, never an outcome it cannot control.
         </p>
 
-        <div className="mb-6">
+        <div className="font-mono text-[10px] tracking-widest text-vynx-gold mb-3">
+          JAIL TIME · MISSED LOCK
+        </div>
+        <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-8 max-w-150">
+          Jail Time penalizes a missed lock. Your 10-second lock clock arms when
+          you acknowledge the win; if the lock does not land inside that window,
+          the reputation ladder escalates — 60s, 10min, 1h, 24h, then permanent.
+          A win you never acknowledge is re-auctioned, never jailed.
+        </p>
+
+        <div className="mb-8">
           <JailLadder />
         </div>
 
-        <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-6 max-w-140">
-          Timeouts within 30 seconds of a prior timeout for the same Solver
-          count as a single incident — one network blip does not climb the
-          ladder five times. A missed Deadline is never grouped: it is always a
-          clean, standalone fault.
-        </p>
-
-        <div className="overflow-x-auto">
-          <div role="table" className="w-full min-w-90 mb-4">
-            <div
-              role="row"
-              className={`${jailColClass} border-b border-[var(--color-border)] pb-3`}
-            >
-              {["N", "JAIL TIME", "TRIGGER"].map((h) => (
-                <div
-                  key={h}
-                  role="columnheader"
-                  className="font-mono text-[10px] tracking-[0.15em] uppercase text-vynx-faint"
-                >
-                  {h}
-                </div>
-              ))}
-            </div>
-            {jailRows.map((row) => (
-              <div
-                key={row.n}
-                role="row"
-                className={`${jailColClass} border-b border-[var(--color-border)] py-4 items-center`}
-              >
-                <div role="cell" className="font-mono text-[12px] text-vynx-text">
-                  {row.n}
-                </div>
-                <div
-                  role="cell"
-                  className="font-mono text-[12px] text-vynx-muted"
-                >
-                  {row.time}
-                </div>
-                <div
-                  role="cell"
-                  className="font-body text-[13px] text-vynx-muted"
-                >
-                  {row.trigger}
-                </div>
-              </div>
-            ))}
-            {/* N5 row — gold highlight */}
-            <div
-              role="row"
-              className={`${jailColClass} border border-[var(--color-border-gold)] rounded-[2px] py-4 px-3 mt-2 items-center`}
-            >
-              <div role="cell" className="font-mono text-[12px] text-vynx-text">
-                N5
-              </div>
-              <div role="cell" className="font-mono text-[12px] text-vynx-gold">
-                Permanent
-              </div>
-              <div
-                role="cell"
-                className="font-body text-[13px] text-vynx-muted"
-              >
-                Fifth breach — amnesty-immune
-              </div>
-            </div>
-          </div>
+        <div className="font-mono text-[10px] tracking-widest text-vynx-gold mb-3">
+          SLASH · MISSED DEADLINE
         </div>
-
-        <div className="font-mono text-[10px] tracking-widest text-vynx-faint mb-3 mt-8">
-          SLASH · DEADLINE BREACH · T = 15 MIN
-        </div>
-        <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-6">
-          If settlement is not completed within the agent&rsquo;s 15-minute
-          deadline, a deterministic slash is applied. No oracle. No human
-          discretion. The arithmetic is enforced by{" "}
-          <span className="font-mono text-[13px] text-vynx-text">
-            VynxRegistry.sol
-          </span>{" "}
-          on Ethereum L1.
-        </p>
-
-        <CodeBlock
-          code={
-            "SlashAmount = InputAmount × 10%\n→ 5% to Agent (compensation)\n→ 5% to VynX Treasury"
-          }
-        />
-
-        <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mt-6">
-          Slashing executes through the DirectVaultAdapter on Ethereum L1 —
-          direct USDC custody, no yield protocol. The 7-day unbonding period
-          quarantines capital during resolution.
-        </p>
-      </section>
-
-      {/* ── Integration ── */}
-      <section id="integration" className="mb-20">
-        <SectionLabel>INTEGRATION</SectionLabel>
-        <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
-          INTEGRATION GUIDE
-        </h2>
-
-        {integrationSteps.map((step) => (
-          <div
-            key={step.num}
-            className="grid grid-cols-[32px_minmax(0,1fr)] gap-4 mb-8 items-start"
-          >
-            <span className="font-display text-[28px] text-vynx-faint leading-none">
-              {step.num}
+        <div className="space-y-4 font-body font-light text-[14px] text-vynx-muted leading-relaxed max-w-150 mb-8">
+          <p>
+            SlashAmount penalizes a missed deadline. A locked intent left
+            unsettled past the agent&rsquo;s 15-minute deadline is refunded to
+            the agent permissionlessly, the solver is slashed 10% of the
+            InputAmount, and the same breach jails the solver at level 3 or
+            higher. The slash and the jail are not alternatives; a missed
+            deadline carries both.
+          </p>
+          <p>
+            The slash is deterministic: InputAmount × 10%, split 5% to the
+            affected agent and 5% to the treasury, at most once per intent. It
+            requires two independent signatures — the keeper role and an
+            immutable attester — so no single party can trigger, inflate, or
+            redirect it. It executes on Ethereum L1 through{" "}
+            <span className="font-mono text-[13px] text-vynx-text">
+              VynxRegistry.sol
             </span>
-            <div>
-              <div className="font-mono text-[11px] tracking-wide text-vynx-muted uppercase mb-2">
-                {step.title}
-              </div>
-              <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed">
-                {step.body}
-              </p>
-            </div>
-          </div>
-        ))}
-
-        <div className="font-mono text-[10px] tracking-widest text-vynx-faint mt-12 mb-6">
-          WEBSOCKET PUSH PROTOCOL
+            . No oracle, no discretion.
+          </p>
+          <p>
+            Exit is a 7-day, two-phase deregister, not an instant withdrawal.
+            The delay is deliberate: it keeps capital slashable through every
+            open position and closes the deregister-and-dodge path. It is the
+            agent&rsquo;s guarantee, not the solver&rsquo;s tax.
+          </p>
         </div>
-        <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mb-6 max-w-140">
-          Polling cannot meet the 200ms window — by the time a poll returns, the
-          auction has closed. Connect to{" "}
-          <span className="font-mono text-[13px] text-vynx-text">/v1/ws</span> and
-          identify with{" "}
-          <span className="font-mono text-[13px] text-vynx-text">?solver=0x…</span>.
-          The Relayer broadcasts{" "}
-          <span className="font-mono text-[13px] text-vynx-text">
-            intent_announced
-          </span>{" "}
-          to every connected Solver the moment an intent is accepted — before
-          the window opens — and unicasts{" "}
-          <span className="font-mono text-[13px] text-vynx-text">auction_won</span>{" "}
-          to the winner once the auction concludes.
-        </p>
 
-        <CodeBlock
-          language="json"
-          label="PUSH FRAMES"
-          code={`// broadcast to all solvers, before the 200ms window
-{
-  "type":              "intent_announced",
-  "intentId":          "0x…",
-  "inputAmount":       "100000000",
-  "inputToken":        "0x…",
-  "originChainId":     8453,
-  "targetToken":       "0x…",
-  "targetChainId":     1,
-  "auctionDeadlineMs": 1700000000000
-}
-
-// unicast to the winning solver, after adjudication
-{
-  "type":          "auction_won",
-  "intentId":      "0x…",
-  "winningAmount": "102000000",
-  "slaExpiry":     1700000500
-}`}
-        />
+        <Card>
+          <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed">
+            Read the model back: the auction costs nothing to lose, the lock SLA
+            arms on your own acknowledgement, and the slash fires only on a
+            deadline you accepted. Every penalty targets an action you could
+            take.
+          </p>
+        </Card>
       </section>
 
-      {/* ── SDK Reference ── */}
-      <section id="sdk-reference" className="mb-20">
-        <SectionLabel>SDK REFERENCE</SectionLabel>
+      {/* ── Founding Cohort · The Hook ── */}
+      <section id="cohort" className="mb-20">
+        <SectionLabel>FOUNDING COHORT</SectionLabel>
         <h2 className="font-display text-[36px] leading-none text-vynx-text mb-8">
-          @VYNX/SDK
+          THE FOUNDING COHORT
         </h2>
 
-        <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-[13px] text-vynx-text">
-            @vynx-network/sdk
-          </span>
-          <a
-            href="mailto:cristian@vynx.network"
-            className="font-mono text-[12px] text-vynx-gold hover:text-vynx-text transition-colors duration-200"
-          >
-            REQUEST SDK ACCESS
-          </a>
+        <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-150 mb-8">
+          <p>
+            VynX runs today on Base Sepolia testnet. The contracts are hardened
+            against a formal internal threat model — the BLINDAJE program — but
+            are not yet externally audited. An external audit, pinned mainnet
+            addresses, and a published SDK arrive at launch.
+          </p>
+          <p>
+            The cohort is selective. VynX qualifies the partner, not the reverse
+            — the supply side it wants is already named. A reference solver
+            implementation exists; it is delivered privately to committed
+            partners, alongside the protocol specification and testnet
+            credentials, not published.
+          </p>
+          <p>
+            Integration is at the WebSocket and contract level; solvers do not
+            use the agent SDK. The five destinations are Base, Ethereum,
+            Arbitrum, Optimism, and Polygon.
+          </p>
         </div>
 
-        <CodeBlock
-          language="bash"
-          label="INSTALL · AT LAUNCH"
-          code="npm install @vynx-network/sdk"
-        />
-
-        <p className="font-body font-light text-[14px] text-vynx-muted leading-relaxed mt-6">
-          The SDK signs the agent&rsquo;s EIP-3009 authorization client-side;
-          there is no relayer-signed intent. The eight terms are agent-signed
-          and verified by USDC inside lockIntent(). Solvers do not need the SDK
-          — it is the agent-side integration layer. Solver integration is at the
-          WebSocket and contract level only.
-        </p>
+        <div className="border-t border-[var(--color-border)] pt-8">
+          <p className="font-mono text-[10px] tracking-widest text-vynx-faint mb-6">
+            INTEGRATION PACKET · DELIVERED PRIVATELY TO COMMITTED PARTNERS
+          </p>
+          <Button variant="primary" href="mailto:cristian@vynx.network">
+            JOIN THE FOUNDING-SOLVER COHORT
+          </Button>
+        </div>
       </section>
 
       {/* ── FAQ ── */}
@@ -558,16 +421,6 @@ export default function SolversPage() {
         </h2>
         <FaqAccordion items={faqItems} />
       </section>
-
-      {/* ── CTA ── */}
-      <div className="mt-24 pt-12 border-t border-[var(--color-border)]">
-        <p className="font-mono text-[10px] tracking-widest text-vynx-faint mb-6">
-          FOUNDING COHORT · LIMITED POSITIONS
-        </p>
-        <Button variant="primary" href="mailto:cristian@vynx.network">
-          APPLY AS FOUNDING SOLVER
-        </Button>
-      </div>
     </DocsLayout>
   );
 }
