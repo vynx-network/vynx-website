@@ -3,9 +3,9 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 
 const oligStats = [
-  { value: "~90%", label: "UNISWAPX", sublabel: "Top 3 fillers" },
-  { value: "50–60%", label: "COW PROTOCOL", sublabel: "Top 3 solvers" },
-  { value: "80%", label: "1INCH FUSION", sublabel: "Top 3 MMs" },
+  { value: "~79%", label: "UNISWAPX", sublabel: "Top 3 fillers" },
+  { value: ">50%", label: "COW PROTOCOL", sublabel: "Top 3 solvers" },
+  { value: "~94%", label: "deBRIDGE / DLN", sublabel: "Top solver — near-monopoly" },
 ];
 
 const oligClasses = [

@@ -1,0 +1,111 @@
+WEB CONTENT CORRECTION REPORT
+Aligns concentration + TAM stats with the audited market corpus (00-6, 00-8).
+Data/claim values only. No design changes.
+
+================================================================================
+C1 — UniswapX concentration (top-5 share relabeled to correct top-3 metric)
+================================================================================
+File: components/landing/SolverProgram.tsx
+  Line 6
+  BEFORE: value: "~90%"   (entry: label "UNISWAPX", sublabel "Top 3 fillers")
+  AFTER:  value: "~79%"   (label + sublabel unchanged)
+
+File: app/thesis/page.tsx  (array oligStats — UNISWAPX entry)
+  Line 61
+    BEFORE: value: "~90%"
+    AFTER:  value: "~79%"
+  Line 63
+    BEFORE: sublabel: "Top 3 fillers. Wintermute + Rizzolver ≈ 60%."
+    AFTER:  sublabel: "Top 3 fillers. Wintermute ≈ 60% (top filler)."
+  Line 64
+    BEFORE: source: "FLASHBOTS · DEC 2023"
+    AFTER:  source: "INTENT-BASED MARKETS · 2024"
+
+Provenance: UniswapX top-3 ≈ 79% volume; top-5 ≈ 90%; top-1 (Wintermute) ≈ 60%.
+Rizzolver is Wintermute's identity on other venues, not a separate UniswapX
+filler — corpus 00-6.
+
+================================================================================
+C2 — CoW Protocol concentration (60% upper bound not supported; tightened)
+================================================================================
+File: components/landing/SolverProgram.tsx
+  Line 7
+  BEFORE: value: "50–60%"   (entry: label "COW PROTOCOL", sublabel "Top 3 solvers")
+  AFTER:  value: ">50%"     (label + sublabel unchanged)
+
+File: app/thesis/page.tsx  (array oligStats — COW PROTOCOL entry)
+  Line 67
+    BEFORE: value: "50–60%"
+    AFTER:  value: ">50%"
+  (sublabel "Top 3 solvers. Barter alone = 28.2%." and source "BLOCKWORKS · DL NEWS"
+   left unchanged — both correct.)
+
+Provenance: CoW top-3 > 50% volume; top-1 (Barter) ≈ 28% — corpus 00-6.
+
+================================================================================
+C3 — 1inch Fusion → replaced with deBridge/DLN (no traceable 1inch source)
+================================================================================
+File: components/landing/SolverProgram.tsx
+  Line 8 (three values replaced in place — no entry added/removed)
+    BEFORE: value: "80%",  label: "1INCH FUSION",   sublabel: "Top 3 MMs"
+    AFTER:  value: "~94%", label: "deBRIDGE / DLN", sublabel: "Top solver — near-monopoly"
+
+File: app/thesis/page.tsx  (array oligStats — entry formerly 1INCH FUSION)
+  Line 73
+    BEFORE: value: "80%"
+    AFTER:  value: "~94%"
+  Line 74
+    BEFORE: label: "1INCH FUSION"
+    AFTER:  label: "deBRIDGE / DLN"
+  Line 75
+    BEFORE: sublabel: "Top 3 institutional MMs."
+    AFTER:  sublabel: "Single top solver. Near-monopoly execution."
+  Line 76
+    BEFORE: source: "MINT VENTURES · 2025"
+    AFTER:  source: "ARXIV 2503.05338 · 2025"
+
+Provenance: 1inch Fusion has NO public resolver-share figure; only a design cap of
+10 KYC-gated resolvers is documented. deBridge/DLN: single top solver ≈ 94% of
+fulfills (near-monopoly) — corpus 00-6.
+
+================================================================================
+C4 — $30T Gartner TAM → measured 2025 stablecoin value-transfer base
+================================================================================
+File: app/thesis/page.tsx  (array ultimatumStats — AGENTIC ECONOMY TAM entry)
+  Line 119
+    BEFORE: value: "$30T"
+    AFTER:  value: "~$33T"
+  Line 120
+    BEFORE: label: "AGENTIC ECONOMY TAM"
+    AFTER:  label: "STABLECOIN VALUE TRANSFER 2025"
+  Line 121
+    BEFORE: sub: "GARTNER 2030 — 1% capture = $300B in annual settlement."
+    AFTER:  sub: "The cross-chain capital corridor agents inherit — a measured base, not a forecast."
+
+Provenance: "$30T · GARTNER 2030" is the rejected hype figure (Gartner agentic-AI
+infrastructure market — no public methodology, not on-chain value flow). Replacement
+is ~$33T, the 2025 stablecoin value-transfer measured base (a measured corridor, not
+a forecast) — corpus 00-8 / §3.
+
+================================================================================
+CONFIRMATION
+================================================================================
+No className, color, font, layout, grid, component structure, or any non-value
+code was modified. No array entries were added or removed; no ordering changed.
+No forbidden vocabulary ("trustless", "decentralized", "censorship-resistant",
+"no single point of failure") was introduced or removed. Only string/number values
+inside the existing oligStats and ultimatumStats arrays were edited, in place.
+
+Files touched: exactly two —
+  components/landing/SolverProgram.tsx
+  app/thesis/page.tsx
+
+git diff --stat:
+  app/thesis/page.tsx                  | 22 +++++++++++-----------
+  components/landing/SolverProgram.tsx |  6 +++---
+  2 files changed, 14 insertions(+), 14 deletions(-)
+
+npm run build: PASS
+  Next.js 16.2.6 (Turbopack) — Compiled successfully; TypeScript passed.
+  All 9 routes prerendered as static content (○), including / and /thesis.
+  No errors.

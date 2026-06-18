@@ -58,22 +58,22 @@ const oligColClasses = [
 
 const oligStats = [
   {
-    value: "~90%",
+    value: "~79%",
     label: "UNISWAPX",
-    sublabel: "Top 3 fillers. Wintermute + Rizzolver ≈ 60%.",
-    source: "FLASHBOTS · DEC 2023",
+    sublabel: "Top 3 fillers. Wintermute ≈ 60% (top filler).",
+    source: "INTENT-BASED MARKETS · 2024",
   },
   {
-    value: "50–60%",
+    value: ">50%",
     label: "COW PROTOCOL",
     sublabel: "Top 3 solvers. Barter alone = 28.2%.",
     source: "BLOCKWORKS · DL NEWS",
   },
   {
-    value: "80%",
-    label: "1INCH FUSION",
-    sublabel: "Top 3 institutional MMs.",
-    source: "MINT VENTURES · 2025",
+    value: "~94%",
+    label: "deBRIDGE / DLN",
+    sublabel: "Single top solver. Near-monopoly execution.",
+    source: "ARXIV 2503.05338 · 2025",
   },
 ];
 
@@ -116,9 +116,9 @@ const ultimatumStats = [
     sub: "~1M JOBS COMPLETED — organic volume already on Base.",
   },
   {
-    value: "$30T",
-    label: "AGENTIC ECONOMY TAM",
-    sub: "GARTNER 2030 — 1% capture = $300B in annual settlement.",
+    value: "~$33T",
+    label: "STABLECOIN VALUE TRANSFER 2025",
+    sub: "The cross-chain capital corridor agents inherit — a measured base, not a forecast.",
   },
   {
     value: "56%",
