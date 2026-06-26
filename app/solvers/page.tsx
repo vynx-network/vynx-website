@@ -34,9 +34,9 @@ const solverNav = [
 const flowSteps = ["BROADCAST", "BID", "LOCK", "CLAIM"];
 
 const frameStats = [
-  { value: "~90%", label: "UNISWAPX", sub: "Top 3 fillers" },
-  { value: "50–60%", label: "COW PROTOCOL", sub: "Top 3 solvers" },
-  { value: "80%", label: "1INCH FUSION", sub: "Top 3 MMs" },
+  { value: "~79%", label: "UNISWAPX", sub: "Top 3 fillers" },
+  { value: ">50%", label: "COW PROTOCOL", sub: "Top 3 solvers" },
+  { value: "~94%", label: "deBRIDGE / DLN", sub: "Top 3 MMs" },
 ];
 
 const frameStatClasses = [
@@ -263,8 +263,8 @@ export default function SolversPage() {
           </p>
           <p>
             Your fee is not the protocol&rsquo;s fee. A solver&rsquo;s gross is
-            the spread between what it claims — the agent&rsquo;s input minus the
-            10 bps take rate — and what it delivers as its winning bid, less
+            the spread between what it claims — the agent&rsquo;s input minus
+            the 10 bps take rate — and what it delivers as its winning bid, less
             destination gas and the cost of capital in flight. The sealed-bid
             auction compresses that spread toward marginal cost: every basis
             point you keep is one a rival can bid away.
@@ -290,15 +290,15 @@ export default function SolversPage() {
 
         <div className="space-y-4 font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-150 mb-8">
           <p>
-            Collateral is USDC, held in direct custody on Ethereum L1 through the
-            DirectVaultAdapter. No external protocol sits beneath it; the capital
-            stays slashable on the spot.
+            Collateral is USDC, held in direct custody on Ethereum L1 through
+            the DirectVaultAdapter. No external protocol sits beneath it; the
+            capital stays slashable on the spot.
           </p>
           <p>
-            To bid, your free collateral must cover the intent at a Solver Health
-            Factor of 1.20× or higher. The check is a USDC integer comparison —
-            no oracle, no price feed, no conversion. It either holds or it does
-            not.
+            To bid, your free collateral must cover the intent at a Solver
+            Health Factor of 1.20× or higher. The check is a USDC integer
+            comparison — no oracle, no price feed, no conversion. It either
+            holds or it does not.
           </p>
           <p>
             In-flight exposure may never reach 80% of locked collateral. The 20%
