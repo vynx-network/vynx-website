@@ -39,7 +39,7 @@ function NashBlock() {
     <Card goldBorder className="py-8 px-8">
       <p className="font-body italic text-[15px] text-vynx-muted leading-relaxed">
         If Wintermute does not lock, GSR captures their share. If GSR does not
-        lock, Barter captures both. The equilibrium is competitive
+        lock, Auros captures both. The equilibrium is competitive
         overcollateralization.
       </p>
       <div className="font-mono text-[10px] tracking-widest uppercase text-vynx-faint mt-4">

@@ -3,12 +3,6 @@ const colClass = "grid grid-cols-[2fr_1fr_2fr_1fr]";
 const normalRows = [
   { protocol: "CoW Swap", median: "30s", tail: "45–90s", vs: "150–450×" },
   { protocol: "UniswapX", median: "≤12s", tail: "up to 60s", vs: "60–300×" },
-  {
-    protocol: "Stargate V2",
-    median: "30s – 5min",
-    tail: "V1 mean: 498.7s",
-    vs: "150×–1500×",
-  },
 ];
 
 export default function LatencyTable() {

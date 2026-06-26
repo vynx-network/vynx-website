@@ -9,7 +9,7 @@ import DocsSidebar from "@/components/layout/DocsSidebar";
 export const metadata = {
   title: { absolute: "VynX · Network Thesis" },
   description:
-    "The M2M settlement layer for the agentic economy on Base. Public thesis: §1–§4.",
+    "The M2M clearing layer for the agentic economy on Base. Public thesis: §1–§4.",
 };
 
 const spamStats = [
@@ -230,8 +230,6 @@ export default function ThesisPage() {
                 batches settle in 30 seconds — not because cryptography demands
                 it, but because the batch auction was designed for human
                 tolerance. UniswapX Dutch auctions run up to 60 seconds at tail.
-                Stargate V2 recorded a mean settlement of 498.7 seconds in its
-                V1 cohort.
               </p>
               <p>
                 An agent with a 200-millisecond decision cycle cannot operate on
@@ -265,8 +263,8 @@ export default function ThesisPage() {
               <p>
                 The public mempool is a killing field. Private routing has
                 become a parasitic tax. No incremental fix exists. The
-                post-signature exposure architecture is the defect. It must be
-                replaced.
+                post-signature exposure architecture is the defect. VynX closes
+                it.
               </p>
             </div>
           </section>
@@ -575,7 +573,7 @@ export default function ThesisPage() {
             <Card goldBorder className="py-8 px-8">
               <p className="font-body italic text-[15px] text-vynx-muted leading-relaxed">
                 If Wintermute does not lock, GSR captures their share. If GSR
-                does not lock, Barter captures both. The equilibrium is
+                does not lock, Auros captures both. The equilibrium is
                 competitive overcollateralization.
               </p>
               <div className="font-mono text-[10px] tracking-widest uppercase text-vynx-faint mt-4">
@@ -595,7 +593,7 @@ export default function ThesisPage() {
                 20 bps bytecode ceiling that cannot be exceeded by governance or
                 upgrade — the cap is immutable. An agent that optimizes for
                 latency over marginal cost does not comparison shop at the
-                settlement layer. The demand is inelastic by architecture.
+                clearing layer. The demand is inelastic by architecture.
               </p>
             </div>
 
@@ -686,8 +684,8 @@ export default function ThesisPage() {
                 Settlement infrastructure obeys network effects. The protocol
                 that captures the first cohort of institutional Solvers and the
                 first cohort of agentic developers sets the clearing standard.
-                There is no second-mover on settlement infrastructure. The
-                window is 2026.
+                A standard set by example is sticky for years; incumbent rails
+                coexist with it rather than being displaced. The window is 2026.
               </p>
               <p>The evidence is not speculative. It is already on-chain.</p>
             </div>
@@ -710,8 +708,8 @@ export default function ThesisPage() {
 
             <Card goldBorder className="text-center py-10 mt-12">
               <p className="font-body font-medium text-[17px] text-vynx-text leading-relaxed max-w-120 mx-auto">
-                Whoever controls agentic settlement on Base in 2026 will control
-                the AI value highway for the next decade.
+                Whoever owns the integration locus for agentic settlement on
+                Base in 2026 inherits the cross-chain flow it serves for years.
               </p>
               <p className="font-body text-[13px] text-vynx-muted mt-3 max-w-120 mx-auto">
                 This is not a prediction. It is the geometry of network effects

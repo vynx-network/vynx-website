@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s — VynX",
   },
   description:
-    "The native settlement layer for AI agents on Base. 200ms sealed-bid OFA with institutional cryptoeconomic guarantees.",
+    "The native clearing layer for AI agents on Base. 200ms sealed-bid OFA with institutional cryptoeconomic guarantees.",
   openGraph: {
     title: "VynX",
     description: "Deterministic Settlement for the M2M Economy.",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "VynX — M2M Settlement",
-    description: "The settlement layer for AI agents on Base.",
+    description: "The clearing layer for AI agents on Base.",
   },
   robots: {
     index: true,

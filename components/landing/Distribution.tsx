@@ -65,8 +65,8 @@ export default function Distribution() {
 
         <div className="max-w-140">
           <p className="font-body font-medium text-[15px] text-vynx-text leading-relaxed">
-            There is no second-mover on settlement infrastructure. The M2M
-            standard is being defined now.
+            The integration locus is won once; once set, it stays the default
+            for years. The M2M standard is being defined now.
           </p>
         </div>
       </div>

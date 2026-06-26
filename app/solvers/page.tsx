@@ -108,7 +108,7 @@ const faqItems: FaqItem[] = [
   },
   {
     q: "If the Relayer is unresponsive after I have paid on the destination chain, what happens to my capital?",
-    a: "Voucher issuance depends on Relayer liveness — this is the honest hard edge. The Relayer cannot misdirect your voucher; it binds your address and the exact amount, and on recovery the deterministic witness re-issues it. The worst case is a prolonged outage past the 15-minute deadline after you have fulfilled: the agent is refunded on-chain and your destination capital is exposed until the Relayer resumes. Per-intent exposure is bounded by the $50–$500 ticket, and Relayer high-availability is part of the operational posture discussed with founding partners.",
+    a: "Voucher issuance depends on Relayer liveness — this is the honest hard edge. The Relayer cannot misdirect your voucher; it binds your address and the exact amount, and on recovery the deterministic witness re-issues it. The worst case is a prolonged outage past the 15-minute deadline after you have fulfilled: the agent is refunded on-chain and your destination capital is exposed until the Relayer resumes. Per-intent exposure is bounded by the collateral model: SHF ≥ 1.20× and an 80% cap on in-flight exposure. The entry ticket starts at a $50 floor; its upper band is a relayer configuration that ramps through the guarded launch, not a fixed cap. Relayer high-availability is part of the operational posture discussed with founding partners.",
   },
   {
     q: "Are the contracts audited?",
@@ -270,9 +270,11 @@ export default function SolversPage() {
             point you keep is one a rival can bid away.
           </p>
           <p>
-            Tickets run $50 to $500 USDC per intent. The book is small-ticket
-            and high-frequency — an inventory and latency problem, not a
-            balance-sheet one.
+            Tickets start at a $50 floor. The upper band is a relayer
+            configuration that ramps through the guarded launch, not a fixed
+            cap; the end-state bound is the collateral model (SHF ≥ 1.20×, 80%
+            exposure cap). The book is small-ticket and high-frequency — an
+            inventory and latency problem, not a balance-sheet one.
           </p>
         </div>
 
