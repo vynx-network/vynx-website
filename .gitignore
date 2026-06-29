@@ -69,3 +69,4 @@ lighthouse-*.json
 
 # local MCP config (not for public repo)
 .mcp.json
+.fontcache
