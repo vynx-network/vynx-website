@@ -21,8 +21,7 @@ export default function Hero() {
           {/* Subline */}
           <div className="mt-6 max-w-140">
             <p className="font-body font-light text-[17px] leading-relaxed text-vynx-muted">
-              The deterministic clearing layer for the machine economy.
-              Trust-minimized for funds.
+              The clearing layer for the machine-to-machine economy.
             </p>
           </div>
 

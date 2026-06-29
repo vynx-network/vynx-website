@@ -9,7 +9,7 @@ export default function ThesisHeader() {
       </p>
 
       <h1 className="font-display text-section-headline leading-none text-vynx-text mb-6">
-        THE M2M CLEARING LAYER FOR THE AGENTIC ECONOMY.
+        THE CLEARING LAYER FOR THE MACHINE-TO-MACHINE ECONOMY.
       </h1>
 
       <p className="font-body font-light text-[15px] text-vynx-muted leading-relaxed max-w-140 mb-12">

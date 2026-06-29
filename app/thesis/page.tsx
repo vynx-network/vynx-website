@@ -9,7 +9,7 @@ import DocsSidebar from "@/components/layout/DocsSidebar";
 export const metadata = {
   title: { absolute: "VynX · Network Thesis" },
   description:
-    "The M2M clearing layer for the agentic economy on Base. Public thesis: §1–§4.",
+    "The clearing layer for the machine-to-machine economy. Public thesis: §1–§4.",
 };
 
 const spamStats = [
@@ -387,8 +387,8 @@ export default function ThesisPage() {
                 cannot alter them; any change breaks the recomputed nonce and
                 Circle&rsquo;s USDC rejects the lock. The call locks the
                 agent&rsquo;s capital on Base before any destination-chain
-                payment is made. The Origin Lock is the trust-minimized, atomic
-                guarantee that eliminates the two primary attack vectors against
+                payment is made. The Origin Lock is the atomic guarantee that
+                eliminates the two primary attack vectors against
                 cross-chain settlement.
               </p>
             </div>
@@ -489,9 +489,9 @@ export default function ThesisPage() {
               <p>
                 A 200-millisecond sealed-bid auction needs one authoritative
                 clock. So V1 runs a single Relayer — by design, not by oversight.
-                It is trust-minimized for terms and funds: the agent&rsquo;s
-                signed terms cannot be altered, and every voucher is bound
-                on-chain to a specific intent, Solver, and amount.
+                The agent&rsquo;s signed terms cannot be altered, and every
+                voucher is bound on-chain to a specific intent, Solver, and
+                amount.
               </p>
               <p>
                 The Relayer is a liveness dependency, not a custodian. It can

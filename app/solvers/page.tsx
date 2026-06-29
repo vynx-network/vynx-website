@@ -104,7 +104,7 @@ const cycle = [
 const faqItems: FaqItem[] = [
   {
     q: "What must a Solver trust the Relayer for — and what can it never do?",
-    a: "The Relayer adjudicates the auction, witnesses the destination payment, and relays the EIP-712 voucher that releases your claim. It can never alter the agent's eight signed terms — any change breaks the EIP-3009 nonce and USDC rejects the lock — redirect funds, since the voucher binds intentId, solver, and amount and the agent's refund is permissionless, or slash you unilaterally, since a slash requires both the keeper role and an independent, immutable attester. It cannot sign vouchers itself: signing is isolated in a separate Signer holding its own key. VynX is trust-minimized for terms and funds — it does not ask you to trust the Relayer with either; the single Relayer is a liveness dependency, not a custodian.",
+    a: "The Relayer adjudicates the auction, witnesses the destination payment, and relays the EIP-712 voucher that releases your claim. It can never alter the agent's eight signed terms — any change breaks the EIP-3009 nonce and USDC rejects the lock — redirect funds, since the voucher binds intentId, solver, and amount and the agent's refund is permissionless, or slash you unilaterally, since a slash requires both the keeper role and an independent, immutable attester. It cannot sign vouchers itself: signing is isolated in a separate Signer holding its own key. VynX does not ask you to trust the Relayer with your terms or your funds; the single Relayer is a liveness dependency, not a custodian.",
   },
   {
     q: "If the Relayer is unresponsive after I have paid on the destination chain, what happens to my capital?",

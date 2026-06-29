@@ -1,10 +1,10 @@
 # VynX Network
 
-The public-facing website of the VynX protocol — a 200ms sealed-bid Order Flow Auction settlement layer for the AI agent economy on Base.
+The public-facing website of the VynX protocol — a 200ms sealed-bid Order Flow Auction clearing layer for the machine-to-machine economy on Base.
 
 ## Overview
 
-`vynx.network` is the institutional front door to the VynX protocol. The protocol itself is a 200ms sealed-bid Order Flow Auction (OFA) settlement layer for cross-chain transfer intents issued by AI agents, settling on Base. This repository is the marketing and documentation site that communicates that protocol — its thesis, its solver program, and its agent integration surface.
+`vynx.network` is the institutional front door to the VynX protocol. The protocol itself is a 200ms sealed-bid Order Flow Auction (OFA) clearing layer for cross-chain transfer intents issued by AI agents, settling on Base. This repository is the marketing and documentation site that communicates that protocol — its thesis, its solver program, and its agent integration surface.
 
 The site speaks to a single audience: institutional readers. Crypto-native VCs, market makers, and prospective solvers — qualified counterparties, not retail. The register is deliberate: cold, declarative, technically precise.
 
@@ -196,7 +196,7 @@ Then start the dev server (`npm run dev`) and run `/agent ux-auditor`.
 
 For developers arriving without context, VynX is:
 
-- A **200ms sealed-bid Order Flow Auction (OFA)** settlement layer for cross-chain transfer intents issued by AI agents.
+- A **200ms sealed-bid Order Flow Auction (OFA)** clearing layer for cross-chain transfer intents issued by AI agents.
 - Settling on **Base** (Base L2) — chosen for L1-grade security via fault proofs, sub-second blocks, and Coinbase-issued USDC as the canonical collateral and settlement token.
 - Deployed on **Base Sepolia**: `VynxSettlement` at `0xA8cA9d84e35ac8F5af6F1D91fe4bE1C0BAf44296`.
 - Integrated via **`@vynx-network/sdk`** on npm (`import { VynxCore } from '@vynx-network/sdk'`).

@@ -150,7 +150,7 @@ const agentFaqItems: FaqItem[] = [
   },
   {
     q: "Can my funds be stolen, or get stuck?",
-    a: "Funds are trust-minimized. Your signed terms cannot be altered, the Relayer can never redirect or seize your USDC, and settlement is atomic — you receive the output token or a full on-chain refund, with no partial fills. The honest edge: the single Relayer is a liveness dependency, so an outage can delay settlement, but your principal is recoverable through the permissionless refund. The one exception sits outside the protocol — Circle's USDC can blacklist or pause an address, which can leave funds temporarily immobile until Circle resolves it.",
+    a: "Your signed terms cannot be altered, the Relayer can never redirect or seize your USDC, and settlement is atomic — you receive the output token or a full on-chain refund, with no partial fills. The honest edge: the single Relayer is a liveness dependency, so an outage can delay settlement, but your principal is recoverable through the permissionless refund. The one exception sits outside the protocol — Circle's USDC can blacklist or pause an address, which can leave funds temporarily immobile until Circle resolves it.",
   },
   {
     q: "What happens if no solver fills my intent?",
@@ -193,7 +193,8 @@ export default function AgentsPage() {
             the settlement work. You sign; the protocol does the rest.
           </p>
           <p>
-            The agentic economy runs on a 200-millisecond decision cycle.
+            The machine-to-machine economy runs on a 200-millisecond decision
+            cycle.
             Human-era rails — thirty-second-to-multi-minute settlement, wallet
             popups, gas management, a human in the loop — break for an autonomous
             agent. VynX is the settlement rail built for machine cadence.

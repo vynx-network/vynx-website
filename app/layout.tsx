@@ -31,10 +31,10 @@ export const metadata: Metadata = {
     template: "%s — VynX",
   },
   description:
-    "The native clearing layer for AI agents on Base. 200ms sealed-bid OFA with institutional cryptoeconomic guarantees.",
+    "The clearing layer for the machine-to-machine economy. 200ms sealed-bid OFA with collateral-backed, fulfillment-or-refund settlement.",
   openGraph: {
     title: "VynX",
-    description: "Deterministic Settlement for the M2M Economy.",
+    description: "The clearing layer for the machine-to-machine economy.",
     url: "https://vynx.network",
     siteName: "VynX",
     images: [
@@ -42,14 +42,14 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "VynX — M2M Settlement",
+        alt: "VynX — The Clearing Layer",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "VynX — M2M Settlement",
-    description: "The clearing layer for AI agents on Base.",
+    title: "VynX — The Clearing Layer",
+    description: "The clearing layer for the machine-to-machine economy.",
   },
   robots: {
     index: true,

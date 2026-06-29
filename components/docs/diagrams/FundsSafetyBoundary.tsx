@@ -96,8 +96,7 @@ export default function FundsSafetyBoundary() {
       </div>
 
       <p className="font-body font-light text-[12px] text-vynx-faint leading-relaxed mt-6 pt-6 border-t border-[var(--color-border)]">
-        Your funds are trust-minimized — the single Relayer is a liveness
-        dependency, not a custodian.
+        The single Relayer is a liveness dependency, not a custodian.
       </p>
     </div>
   );
