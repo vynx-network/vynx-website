@@ -41,7 +41,8 @@ function ChecklistItem({ title, subtitle, address, link }: ChecklistItemProps) {
 const items: ChecklistItemProps[] = [
   {
     title: "PROTOCOL CONTRACTS",
-    subtitle: "Six immutable contracts across Ethereum L1 + Base L2 · BLINDAJE-hardened",
+    subtitle:
+      "Five immutable contracts across Ethereum L1 + Base L2 · BLINDAJE-hardened",
   },
   {
     title: "GO RELAYER ENGINE",
