@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 const toggleClass =
   "flex items-center text-vynx-muted hover:text-vynx-text transition-colors duration-200";
@@ -44,13 +45,20 @@ function SunIcon() {
 
 export default function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  // resolvedTheme is undefined on the server and first client render
-  // (next-themes resolves it post-hydration) — default to the dark
-  // assumption so SSR + first paint agree. The icon shows the theme you'll
-  // switch TO: sun in dark, moon in light. suppressHydrationWarning covers a
-  // light-persisted hydrate.
-  const isDark = resolvedTheme !== "light";
+  // next-themes only knows the persisted (localStorage) theme after the
+  // component mounts on the client. Until then we render the icon the server
+  // emits for the dark default (sun) so SSR and the first client render agree,
+  // then swap to the resolved icon post-mount. This is the canonical
+  // next-themes pattern — it prevents a hydration mismatch on the SVG child,
+  // which suppressHydrationWarning cannot cover (it only guards an element's
+  // own attributes, not its descendants).
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = !mounted || resolvedTheme !== "light";
   const target = isDark ? "light" : "dark";
 
   return (
@@ -59,7 +67,6 @@ export default function ThemeToggle() {
       onClick={() => setTheme(target)}
       aria-label={`Switch to ${target} theme`}
       className={toggleClass}
-      suppressHydrationWarning
     >
       {isDark ? <SunIcon /> : <MoonIcon />}
     </button>
