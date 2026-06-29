@@ -9,7 +9,7 @@ import DocsSidebar from "@/components/layout/DocsSidebar";
 export const metadata = {
   title: { absolute: "VynX · Network Thesis" },
   description:
-    "The clearing layer for the machine-to-machine economy. Public thesis: §1–§4.",
+    "The clearing layer for the machine-to-machine economy. On Base. Public thesis: §1–§4.",
 };
 
 const spamStats = [

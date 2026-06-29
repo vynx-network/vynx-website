@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s — VynX",
   },
   description:
-    "The clearing layer for the machine-to-machine economy. 200ms sealed-bid OFA with collateral-backed, fulfillment-or-refund settlement.",
+    "The clearing layer for the machine-to-machine economy. 200ms sealed-bid OFA with collateral-backed, fulfillment-or-refund settlement on Base.",
   openGraph: {
     title: "VynX",
     description: "The clearing layer for the machine-to-machine economy.",
