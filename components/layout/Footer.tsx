@@ -12,7 +12,7 @@ export default function Footer() {
           cristian@vynx.network
         </a>
         <span className="font-mono text-[11px] text-vynx-faint">
-          © 2026 VynX
+          Dedicated to Alba, for the teachings and support on this project
         </span>
       </div>
     </footer>
